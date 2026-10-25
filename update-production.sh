@@ -259,7 +259,7 @@ check_health() {
 
         echo -n "."
         sleep $HEALTH_RETRY_DELAY
-        ((retries++))
+        retries=$((retries + 1))
     done
 
     echo ""

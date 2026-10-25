@@ -61,9 +61,12 @@ check_requirements() {
         exit 1
     fi
 
-    # Check environment file permissions
-    if [[ "$(stat -f '%A' "$ENV_FILE" 2>/dev/null || stat -c '%a' "$ENV_FILE" 2>/dev/null)" != "600" ]]; then
-        log_warning "$ENV_FILE permissions should be 600 (owner read/write only)"
+    # Check environment file permissions (Linux uses -c, BSD/macOS uses -f)
+    local perms
+    perms=$(stat -c '%a' "$ENV_FILE" 2>/dev/null || stat -f '%A' "$ENV_FILE" 2>/dev/null || echo "unknown")
+    # Accept both "600" and "0600" (BSD format)
+    if [[ "$perms" != "600" ]] && [[ "$perms" != "0600" ]]; then
+        log_warning "$ENV_FILE permissions are $perms (should be 600)"
         log_warning "Run: chmod 600 $ENV_FILE"
     fi
 
@@ -149,7 +152,7 @@ start_database() {
             return 0
         fi
         sleep 2
-        ((retries++))
+        retries=$((retries + 1))
     done
 
     log_error "PostgreSQL did not become healthy"
@@ -200,7 +203,7 @@ wait_for_health() {
 
         echo -n "."
         sleep $HEALTH_RETRY_DELAY
-        ((retries++))
+        retries=$((retries + 1))
     done
 
     echo ""
