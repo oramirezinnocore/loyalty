@@ -1,0 +1,307 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum UserRole {
+  SUPER_ADMIN
+  BUSINESS_ADMIN
+}
+
+enum BusinessStatus {
+  ACTIVE
+  SUSPENDED
+}
+
+enum SubscriptionStatus {
+  TRIAL
+  ACTIVE
+  PAST_DUE
+  CANCELED
+  SUSPENDED
+}
+
+enum LoyaltyProgramStatus {
+  DRAFT
+  ACTIVE
+  PAUSED
+}
+
+enum TransactionType {
+  PURCHASE
+  VISIT
+  STAMP
+  MANUAL_ADJUSTMENT
+  REDEMPTION
+}
+
+enum EarnedRewardStatus {
+  AVAILABLE
+  REDEEMED
+  EXPIRED
+}
+
+model User {
+  id            String         @id @default(cuid())
+  email         String         @unique
+  name          String?
+  passwordHash  String
+  role          UserRole       @default(BUSINESS_ADMIN)
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+
+  businessUsers BusinessUser[]
+
+  @@index([email])
+}
+
+model Business {
+  id              String          @id @default(cuid())
+  name            String
+  slug            String          @unique
+  status          BusinessStatus  @default(ACTIVE)
+
+  // Branding
+  brandColor      String?
+  logoUrl         String?
+  description     String?
+
+  createdAt       DateTime        @default(now())
+  updatedAt       DateTime        @updatedAt
+
+  businessUsers   BusinessUser[]
+  locations       Location[]
+  loyaltyPrograms LoyaltyProgram[]
+  customers       Customer[]
+  subscription    Subscription?
+
+  @@index([slug])
+  @@index([status])
+}
+
+model BusinessUser {
+  id         String   @id @default(cuid())
+  businessId String
+  userId     String
+  createdAt  DateTime @default(now())
+
+  business   Business @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([businessId, userId])
+  @@index([userId])
+  @@index([businessId])
+}
+
+model Location {
+  id         String   @id @default(cuid())
+  businessId String
+  name       String
+  address    String?
+  city       String?
+  state      String?
+  postalCode String?
+  country    String   @default("MX")
+  phone      String?
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  business   Business @relation(fields: [businessId], references: [id], onDelete: Cascade)
+
+  @@index([businessId])
+}
+
+model Subscription {
+  id              String             @id @default(cuid())
+  businessId      String             @unique
+  status          SubscriptionStatus @default(TRIAL)
+  priceMonthlyMXN Int                @default(299)
+  currentPeriodStart DateTime?
+  currentPeriodEnd   DateTime?
+  trialEndsAt     DateTime?
+  canceledAt      DateTime?
+
+  // Mercado Pago integration
+  mpPreapprovalId String?            @unique
+  mpPayerEmail    String?
+  mpStatus        String?
+  lastPaymentDate DateTime?
+  nextBillingDate DateTime?
+  gracePeriodEndsAt DateTime?
+
+  createdAt       DateTime           @default(now())
+  updatedAt       DateTime           @updatedAt
+
+  business        Business           @relation(fields: [businessId], references: [id], onDelete: Cascade)
+
+  @@index([businessId])
+  @@index([status])
+  @@index([mpPreapprovalId])
+}
+
+model LoyaltyProgram {
+  id              String               @id @default(cuid())
+  businessId      String
+  name            String
+  description     String?
+  publicDescription String?
+  status          LoyaltyProgramStatus @default(DRAFT)
+
+  // Configuration
+  pointsRequired  Int                  @default(0) // Goal for completion
+
+  createdAt       DateTime             @default(now())
+  updatedAt       DateTime             @updatedAt
+
+  business        Business             @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  rewardDefinitions RewardDefinition[]
+  memberships     Membership[]
+
+  @@index([businessId])
+  @@index([status])
+}
+
+model RewardDefinition {
+  id               String         @id @default(cuid())
+  loyaltyProgramId String
+  name             String
+  description      String?
+  pointsRequired   Int            @default(0)
+  isActive         Boolean        @default(true)
+  createdAt        DateTime       @default(now())
+  updatedAt        DateTime       @updatedAt
+
+  loyaltyProgram   LoyaltyProgram @relation(fields: [loyaltyProgramId], references: [id], onDelete: Cascade)
+  earnedRewards    EarnedReward[]
+
+  @@index([loyaltyProgramId])
+  @@index([isActive])
+}
+
+model Customer {
+  id          String       @id @default(cuid())
+  businessId  String
+  email       String?
+  phone       String?
+  firstName   String
+  lastName    String?
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+
+  business    Business     @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  memberships Membership[]
+
+  @@unique([businessId, email])
+  @@index([businessId])
+  @@index([email])
+  @@index([phone])
+}
+
+model Membership {
+  id               String         @id @default(cuid())
+  customerId       String
+  loyaltyProgramId String
+  publicToken      String         @unique @default(cuid())
+  currentPoints    Int            @default(0)
+  lifetimePoints   Int            @default(0)
+  isActive         Boolean        @default(true)
+  joinedAt         DateTime       @default(now())
+  lastActivityAt   DateTime?
+  createdAt        DateTime       @default(now())
+  updatedAt        DateTime       @updatedAt
+
+  customer         Customer       @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  loyaltyProgram   LoyaltyProgram @relation(fields: [loyaltyProgramId], references: [id], onDelete: Cascade)
+
+  transactions     Transaction[]
+  earnedRewards    EarnedReward[]
+  walletPass       WalletPass?
+
+  @@unique([customerId, loyaltyProgramId])
+  @@index([publicToken])
+  @@index([customerId])
+  @@index([loyaltyProgramId])
+}
+
+model WalletPass {
+  id           String     @id @default(cuid())
+  membershipId String     @unique
+  applePassId  String?
+  googlePassId String?
+  lastSyncedAt DateTime?
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+
+  membership   Membership @relation(fields: [membershipId], references: [id], onDelete: Cascade)
+
+  @@index([membershipId])
+}
+
+model Transaction {
+  id           String          @id @default(cuid())
+  membershipId String
+  type         TransactionType
+  points       Int
+  amount       Decimal?        @db.Decimal(10, 2)
+  description  String?
+  metadata     Json?
+  createdById  String?
+  createdAt    DateTime        @default(now())
+
+  membership   Membership      @relation(fields: [membershipId], references: [id], onDelete: Cascade)
+
+  @@index([membershipId])
+  @@index([type])
+  @@index([createdAt])
+}
+
+model EarnedReward {
+  id                 String             @id @default(cuid())
+  membershipId       String
+  rewardDefinitionId String
+  status             EarnedRewardStatus @default(AVAILABLE)
+  earnedAt           DateTime           @default(now())
+  expiresAt          DateTime?
+  redeemedAt         DateTime?
+
+  membership         Membership         @relation(fields: [membershipId], references: [id], onDelete: Cascade)
+  rewardDefinition   RewardDefinition   @relation(fields: [rewardDefinitionId], references: [id], onDelete: Cascade)
+
+  redemption         Redemption?
+
+  @@index([membershipId])
+  @@index([rewardDefinitionId])
+  @@index([status])
+  @@index([earnedAt])
+}
+
+model Redemption {
+  id             String       @id @default(cuid())
+  earnedRewardId String       @unique
+  redeemedById   String?
+  notes          String?
+  redeemedAt     DateTime     @default(now())
+
+  earnedReward   EarnedReward @relation(fields: [earnedRewardId], references: [id], onDelete: Cascade)
+
+  @@index([earnedRewardId])
+  @@index([redeemedAt])
+}
+
+model WebhookEvent {
+  id              String   @id @default(cuid())
+  provider        String
+  eventId         String   @unique
+  eventType       String
+  processed       Boolean  @default(false)
+  payload         Json
+  createdAt       DateTime @default(now())
+  processedAt     DateTime?
+
+  @@index([provider, eventId])
+  @@index([processed])
+}

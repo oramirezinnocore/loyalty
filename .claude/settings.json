@@ -1,0 +1,7 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(node -e \"const bcrypt = require\\('bcrypt'\\); bcrypt.hash\\('TestClient123!', 10, \\(err, hash\\) => { console.log\\(hash\\); }\\);\")"
+    ]
+  }
+}
