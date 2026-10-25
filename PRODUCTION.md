@@ -1,15 +1,67 @@
 # IntusPath Loyalty - Production Deployment Guide
 
-Complete guide for deploying IntusPath Loyalty to production.
+Complete guide for deploying IntusPath Loyalty to production VPS.
 
 ## Prerequisites
 
-- PostgreSQL 14+ database
-- Node.js 20+ runtime
-- Docker (optional, recommended)
+- Linux VPS (Ubuntu 22.04+ recommended)
+- Docker and Docker Compose V2 installed
+- Nginx installed
+- Git installed
+- Domain DNS configured (loyalty.intuspath.com)
 - Mercado Pago business account (required for billing)
 - Google Cloud account (optional, for Google Wallet)
 - Apple Developer account (optional, for Apple Wallet)
+
+## Quick Start (VPS First Install)
+
+```bash
+# 1. Clone repository
+cd /opt
+sudo git clone https://github.com/oramirezinnocore/loyalty.git
+cd loyalty
+
+# 2. Verify release
+git log --oneline -3
+git describe --tags
+
+# 3. Create production environment
+sudo cp .env.example .env.production
+sudo chmod 600 .env.production
+sudo nano .env.production  # Configure all required variables
+
+# 4. Run first deployment
+sudo ./deploy-production.sh
+
+# 5. Configure Nginx (see Nginx Configuration section)
+
+# 6. Configure DNS A record: loyalty -> VPS IP
+
+# 7. Obtain SSL certificate (see HTTPS Configuration section)
+
+# 8. Configure cron (see Cron Configuration section)
+
+# 9. Verify public access
+curl https://loyalty.intuspath.com/api/health
+```
+
+## Future Updates
+
+Production updates are automated with rollback protection:
+
+```bash
+cd /opt/loyalty
+sudo ./update-production.sh
+```
+
+The update script automatically:
+- Fetches latest from GitHub
+- Validates fast-forward update
+- Builds new application version
+- Runs database migrations
+- Restarts application
+- Verifies health
+- **Automatically rolls back on failure**
 
 ## Environment Configuration
 
@@ -500,3 +552,236 @@ npm run build -- --analyze
 ## License
 
 © 2026 IntusPath. All rights reserved.
+
+## Nginx Configuration
+
+Create `/etc/nginx/sites-available/loyalty.intuspath.com`:
+
+```nginx
+server {
+    listen 80;
+    listen [::]:80;
+    server_name loyalty.intuspath.com;
+
+    # Redirect HTTP to HTTPS (added automatically by Certbot)
+    return 301 https://$server_name$request_uri;
+}
+
+server {
+    listen 443 ssl http2;
+    listen [::]:443 ssl http2;
+    server_name loyalty.intuspath.com;
+
+    # SSL certificates (managed by Certbot)
+    # ssl_certificate /etc/letsencrypt/live/loyalty.intuspath.com/fullchain.pem;
+    # ssl_certificate_key /etc/letsencrypt/live/loyalty.intuspath.com/privkey.pem;
+    # include /etc/letsencrypt/options-ssl-nginx.conf;
+    # ssl_dhparam /etc/letsencrypt/ssl-dhparams.pem;
+
+    # Security headers
+    add_header X-Frame-Options "SAMEORIGIN" always;
+    add_header X-Content-Type-Options "nosniff" always;
+    add_header X-XSS-Protection "1; mode=block" always;
+
+    # Proxy to application
+    location / {
+        proxy_pass http://127.0.0.1:3005;
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection 'upgrade';
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_cache_bypass $http_upgrade;
+
+        # Timeouts
+        proxy_connect_timeout 60s;
+        proxy_send_timeout 60s;
+        proxy_read_timeout 60s;
+
+        # Buffer settings
+        proxy_buffering on;
+        proxy_buffer_size 4k;
+        proxy_buffers 8 4k;
+        proxy_busy_buffers_size 8k;
+    }
+
+    # Health check endpoint (no auth required)
+    location /api/health {
+        proxy_pass http://127.0.0.1:3005;
+        proxy_http_version 1.1;
+        proxy_set_header Host $host;
+        access_log off;
+    }
+
+    # Client max body size (for uploads)
+    client_max_body_size 10M;
+}
+```
+
+Enable site and test:
+
+```bash
+sudo ln -s /etc/nginx/sites-available/loyalty.intuspath.com /etc/nginx/sites-enabled/
+sudo nginx -t
+sudo systemctl reload nginx
+```
+
+## DNS Configuration
+
+Configure DNS A record for your domain:
+
+| Type | Host    | Value           | TTL  |
+|------|---------|-----------------|------|
+| A    | loyalty | VPS_PUBLIC_IP   | 300  |
+
+Wait for DNS propagation before running Certbot:
+
+```bash
+dig loyalty.intuspath.com +short
+# Should return: VPS_PUBLIC_IP
+```
+
+## HTTPS Configuration
+
+Obtain Let's Encrypt SSL certificate:
+
+```bash
+sudo certbot --nginx -d loyalty.intuspath.com
+```
+
+Certbot will automatically:
+- Modify Nginx configuration
+- Add SSL certificates
+- Set up auto-renewal
+
+Verify certificate:
+
+```bash
+sudo certbot certificates
+```
+
+Test auto-renewal:
+
+```bash
+sudo certbot renew --dry-run
+```
+
+## Cron Configuration
+
+Grace period enforcement must run daily.
+
+Create `/etc/cron.d/loyalty-billing`:
+
+```cron
+# IntusPath Loyalty - Daily billing grace period enforcement
+# Runs at 2 AM daily
+
+0 2 * * * root curl -X POST -H "x-cron-secret: YOUR_CRON_SECRET_HERE" http://127.0.0.1:3005/api/billing/enforce-grace >> /var/log/loyalty-cron.log 2>&1
+```
+
+**IMPORTANT:** Replace `YOUR_CRON_SECRET_HERE` with the actual `CRON_SECRET` from `.env.production`.
+
+Set permissions:
+
+```bash
+sudo chmod 644 /etc/cron.d/loyalty-billing
+```
+
+Verify cron syntax:
+
+```bash
+cat /etc/cron.d/loyalty-billing
+```
+
+Manual execution (for testing):
+
+```bash
+curl -X POST \
+  -H "x-cron-secret: YOUR_CRON_SECRET" \
+  http://127.0.0.1:3005/api/billing/enforce-grace
+```
+
+## Docker Architecture
+
+Production deployment uses isolated Docker infrastructure:
+
+### Services
+
+**loyalty-postgres:**
+- Image: postgres:16-alpine
+- Network: loyalty-network (isolated)
+- Volume: loyalty-postgres-data (persistent)
+- Port: NOT exposed to host (internal only)
+- Health check: pg_isready
+- Restart: unless-stopped
+
+**loyalty-app:**
+- Image: loyalty-app:${GIT_SHA}
+- Network: loyalty-network (isolated)
+- Port: 127.0.0.1:3005 → 3000 (localhost only)
+- Health check: /api/health
+- Restart: unless-stopped
+- Environment: from .env.production
+
+### Security
+
+- PostgreSQL is **NOT exposed** to host network
+- Application binds **ONLY to 127.0.0.1** (no 0.0.0.0)
+- Nginx reverse proxy handles public HTTPS traffic
+- Secrets stored in `.env.production` (chmod 600)
+- All inter-service communication uses isolated Docker network
+
+### Useful Commands
+
+```bash
+# View container status
+docker compose --env-file .env.production -f docker-compose.production.yml ps
+
+# View application logs
+docker compose --env-file .env.production -f docker-compose.production.yml logs -f loyalty-app
+
+# View database logs
+docker compose --env-file .env.production -f docker-compose.production.yml logs -f loyalty-postgres
+
+# Check health
+curl http://127.0.0.1:3005/api/health
+
+# Stop services (does not delete data)
+docker compose --env-file .env.production -f docker-compose.production.yml down
+
+# Restart application only
+docker compose --env-file .env.production -f docker-compose.production.yml restart loyalty-app
+
+# View database volume
+docker volume inspect loyalty-postgres-data
+```
+
+## Migration Safety
+
+**Production Migration Rule:**
+
+All database migrations must be **backward-compatible** with the immediately previous application release.
+
+This allows automatic application rollback without database rollback.
+
+**Backward-Compatible Changes:**
+- Adding nullable columns
+- Adding new tables
+- Adding indexes
+- Expanding enum values
+
+**Non-Backward-Compatible Changes (require manual planning):**
+- Dropping columns
+- Renaming columns
+- Changing column types
+- Dropping tables
+- Restricting enum values
+
+For destructive schema changes:
+1. Plan multi-phase migration
+2. Test rollback procedure manually
+3. Schedule maintenance window
+4. Coordinate with team
+
