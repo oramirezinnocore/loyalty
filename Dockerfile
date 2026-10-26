@@ -59,6 +59,11 @@ RUN mkdir -p node_modules/.bin && \
 # Verify Prisma CLI works at build time (catches packaging issues early)
 RUN node_modules/.bin/prisma --version
 
+# Create Next.js cache directory with correct ownership
+# The nextjs user needs write access for runtime cache
+RUN mkdir -p .next/cache && \
+    chown -R nextjs:nodejs .next/cache
+
 USER nextjs
 
 EXPOSE 3000
