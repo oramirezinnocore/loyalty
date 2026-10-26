@@ -39,6 +39,10 @@ readonly HEALTH_RETRY_DELAY=2
 BEFORE_SHA=""
 AFTER_SHA=""
 ROLLBACK_INITIATED=false
+LEGACY_DB_DETECTED=false
+LEGACY_APP_DETECTED=false
+LEGACY_DB_IMAGE=""
+LEGACY_APP_IMAGE=""
 
 log_info() {
     echo -e "${BLUE}[INFO]${NC} $*"
@@ -252,6 +256,136 @@ apply_update() {
     log_success "Updated to: $AFTER_SHA"
 }
 
+detect_legacy_containers() {
+    log_info "Checking for legacy production containers..."
+
+    # Check if loyalty-postgres exists but is not managed by current Compose
+    if docker ps -a --filter "name=^loyalty-postgres$" --format "{{.Names}}" | grep -q "^loyalty-postgres$"; then
+        local compose_project
+        compose_project=$(docker inspect loyalty-postgres --format '{{index .Config.Labels "com.docker.compose.project"}}' 2>/dev/null || echo "")
+
+        if [[ -z "$compose_project" ]] || [[ "$compose_project" != "loyalty" ]]; then
+            log_warning "Legacy database container detected: loyalty-postgres"
+            log_warning "This container will be safely transitioned to Compose management"
+            LEGACY_DB_DETECTED=true
+
+            # Capture current image for potential rollback
+            LEGACY_DB_IMAGE=$(docker inspect loyalty-postgres --format '{{.Config.Image}}' 2>/dev/null || echo "")
+            log_info "Legacy DB image: $LEGACY_DB_IMAGE"
+        fi
+    fi
+
+    # Check if loyalty-app exists but is not managed by current Compose
+    if docker ps -a --filter "name=^loyalty-app$" --format "{{.Names}}" | grep -q "^loyalty-app$"; then
+        local compose_project
+        compose_project=$(docker inspect loyalty-app --format '{{index .Config.Labels "com.docker.compose.project"}}' 2>/dev/null || echo "")
+
+        if [[ -z "$compose_project" ]] || [[ "$compose_project" != "loyalty" ]]; then
+            log_warning "Legacy application container detected: loyalty-app"
+            log_warning "This container will be safely transitioned to Compose management"
+            LEGACY_APP_DETECTED=true
+
+            # Capture current image for potential rollback
+            LEGACY_APP_IMAGE=$(docker inspect loyalty-app --format '{{.Config.Image}}' 2>/dev/null || echo "")
+            log_info "Legacy app image: $LEGACY_APP_IMAGE"
+        fi
+    fi
+
+    if [[ "$LEGACY_DB_DETECTED" == "true" ]] || [[ "$LEGACY_APP_DETECTED" == "true" ]]; then
+        log_warning "Legacy container adoption will be performed"
+        log_warning "This is a one-time transition - future deployments will be standard"
+    else
+        log_info "No legacy containers detected - standard Compose deployment"
+    fi
+}
+
+adopt_legacy_database() {
+    if [[ "$LEGACY_DB_DETECTED" != "true" ]]; then
+        return 0
+    fi
+
+    log_info "=== ADOPTING LEGACY DATABASE CONTAINER ==="
+    echo ""
+
+    # Verify legacy container mounts correct volume
+    local mounted_volume
+    mounted_volume=$(docker inspect loyalty-postgres --format '{{range .Mounts}}{{if eq .Destination "/var/lib/postgresql/data"}}{{.Name}}{{end}}{{end}}' 2>/dev/null)
+
+    if [[ "$mounted_volume" != "loyalty-postgres-data" ]]; then
+        log_error "Legacy container does not mount 'loyalty-postgres-data'"
+        log_error "Mounted volume: $mounted_volume"
+        log_error "Cannot safely adopt - manual intervention required"
+        return 1
+    fi
+
+    log_info "✓ Verified legacy container mounts: loyalty-postgres-data"
+
+    # Check if container is running
+    local is_running
+    is_running=$(docker inspect loyalty-postgres --format '{{.State.Running}}' 2>/dev/null || echo "false")
+
+    if [[ "$is_running" == "true" ]]; then
+        log_info "Stopping legacy database container..."
+        if ! docker stop loyalty-postgres; then
+            log_error "Failed to stop legacy database container"
+            return 1
+        fi
+        log_success "Legacy database container stopped"
+    fi
+
+    # Remove container (NOT volume)
+    log_info "Removing legacy database container (volume preserved)..."
+    if ! docker rm loyalty-postgres; then
+        log_error "Failed to remove legacy database container"
+        log_error "Attempting to restart legacy container for rollback..."
+        docker start loyalty-postgres || true
+        return 1
+    fi
+
+    log_success "Legacy database container removed"
+    log_info "Production volume 'loyalty-postgres-data' preserved"
+    echo ""
+
+    return 0
+}
+
+adopt_legacy_application() {
+    if [[ "$LEGACY_APP_DETECTED" != "true" ]]; then
+        return 0
+    fi
+
+    log_info "=== ADOPTING LEGACY APPLICATION CONTAINER ==="
+    echo ""
+
+    # Check if container is running
+    local is_running
+    is_running=$(docker inspect loyalty-app --format '{{.State.Running}}' 2>/dev/null || echo "false")
+
+    if [[ "$is_running" == "true" ]]; then
+        log_info "Stopping legacy application container..."
+        if ! docker stop loyalty-app; then
+            log_error "Failed to stop legacy application container"
+            return 1
+        fi
+        log_success "Legacy application container stopped"
+    fi
+
+    # Remove container (NOT volumes)
+    log_info "Removing legacy application container (volumes preserved)..."
+    if ! docker rm loyalty-app; then
+        log_error "Failed to remove legacy application container"
+        log_error "Attempting to restart legacy container for rollback..."
+        docker start loyalty-app || true
+        return 1
+    fi
+
+    log_success "Legacy application container removed"
+    log_info "All volumes preserved"
+    echo ""
+
+    return 0
+}
+
 build_new_version() {
     log_info "Building new application version..."
 
@@ -318,33 +452,78 @@ run_migrations() {
     return 0
 }
 
-restart_application() {
-    log_info "Restarting application and database services..."
-
-    # Start db service (will replace loyalty-db-1 with loyalty-postgres container)
-    # Uses existing loyalty-postgres-data volume
+restart_database() {
     log_info "Starting database service..."
+
+    # Adopt legacy database container if necessary
+    if ! adopt_legacy_database; then
+        log_error "Failed to adopt legacy database container"
+        return 1
+    fi
+
+    # Start db service with existing loyalty-postgres-data volume
     if ! docker compose --env-file "$ENV_FILE" -f "$COMPOSE_FILE" up -d db; then
         log_error "Failed to start database service"
         docker compose --env-file "$ENV_FILE" -f "$COMPOSE_FILE" logs db | tail -50
+
+        # Attempt rollback if legacy container was detected
+        if [[ "$LEGACY_DB_DETECTED" == "true" ]] && [[ -n "$LEGACY_DB_IMAGE" ]]; then
+            log_rollback "Attempting to restore legacy database container..."
+            docker run -d \
+                --name loyalty-postgres \
+                --network loyalty_default \
+                -p 5432:5432 \
+                -v loyalty-postgres-data:/var/lib/postgresql/data \
+                -e POSTGRES_USER=loyalty \
+                -e POSTGRES_PASSWORD="${DB_PASSWORD:-}" \
+                -e POSTGRES_DB=loyalty \
+                --restart unless-stopped \
+                "$LEGACY_DB_IMAGE" || log_error "Failed to restore legacy database"
+        fi
+
         return 1
     fi
 
     # Wait for database health
     if ! ensure_database_healthy; then
-        log_error "Database failed health check after restart"
+        log_error "Database failed health check after start"
         return 1
     fi
 
-    # Start app service (will replace with loyalty-app container)
+    log_success "Database service started and healthy"
+    return 0
+}
+
+restart_application() {
     log_info "Starting application service..."
-    if ! docker compose --env-file "$ENV_FILE" -f "$COMPOSE_FILE" up -d --force-recreate --no-deps app; then
-        log_error "Failed to restart application"
-        docker compose --env-file "$ENV_FILE" -f "$COMPOSE_FILE" logs app | tail -50
+
+    # Adopt legacy application container if necessary
+    if ! adopt_legacy_application; then
+        log_error "Failed to adopt legacy application container"
         return 1
     fi
 
-    log_success "Application and database restarted"
+    # Start app service
+    if ! docker compose --env-file "$ENV_FILE" -f "$COMPOSE_FILE" up -d --force-recreate --no-deps app; then
+        log_error "Failed to start application"
+        docker compose --env-file "$ENV_FILE" -f "$COMPOSE_FILE" logs app | tail -50
+
+        # Attempt rollback if legacy container was detected
+        if [[ "$LEGACY_APP_DETECTED" == "true" ]] && [[ -n "$LEGACY_APP_IMAGE" ]]; then
+            log_rollback "Attempting to restore legacy application container..."
+            docker run -d \
+                --name loyalty-app \
+                --network loyalty_default \
+                -p 3000:3000 \
+                -v loyalty-uploads:/app/uploads \
+                --restart unless-stopped \
+                "$LEGACY_APP_IMAGE" || log_error "Failed to restore legacy application"
+        fi
+
+        return 1
+    fi
+
+    log_success "Application service started"
     return 0
 }
 
@@ -449,8 +628,17 @@ show_recovery_commands() {
 }
 
 perform_update() {
+    # Detect legacy containers before making any changes
+    detect_legacy_containers
+
     if ! build_new_version; then
         log_error "Build failed - no changes made"
+        return 1
+    fi
+
+    # Database must be started/adopted before migrations
+    if ! restart_database; then
+        log_error "Database start failed - no migrations performed"
         return 1
     fi
 
@@ -460,7 +648,7 @@ perform_update() {
     fi
 
     if ! restart_application; then
-        log_error "Application restart failed"
+        log_error "Application start failed"
         return 1
     fi
 
