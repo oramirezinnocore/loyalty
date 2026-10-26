@@ -152,10 +152,24 @@ verify_deployment_config() {
         exit 1
     fi
 
+    # Verify production PostgreSQL volume exists
+    if ! docker volume inspect loyalty-postgres-data &> /dev/null; then
+        log_error "Production PostgreSQL volume 'loyalty-postgres-data' not found"
+        log_error "This volume must exist and contain the production database"
+        log_error ""
+        log_error "Available volumes:"
+        docker volume ls
+        exit 1
+    fi
+
     # Verify required environment variables (without printing values)
     if ! grep -q "^DB_PASSWORD=." "$ENV_FILE"; then
         log_error "DB_PASSWORD not set in $ENV_FILE"
         log_error "This is required for production PostgreSQL"
+        log_error ""
+        log_error "The existing production database requires its original password."
+        log_error "Recovery command:"
+        log_error "  docker inspect loyalty-postgres --format '{{range .Config.Env}}{{println .}}{{end}}' | grep POSTGRES_PASSWORD"
         exit 1
     fi
 
@@ -167,6 +181,7 @@ verify_deployment_config() {
 
     log_success "Deployment configuration valid"
     log_info "Services: app, db"
+    log_info "Production volume: loyalty-postgres-data (verified)"
 }
 
 capture_current_state() {
@@ -260,8 +275,37 @@ build_new_version() {
     return 0
 }
 
+ensure_database_healthy() {
+    log_info "Ensuring PostgreSQL is healthy..."
+
+    local retries=0
+    local max_retries=30
+
+    while [[ $retries -lt $max_retries ]]; do
+        if docker compose --env-file "$ENV_FILE" -f "$COMPOSE_FILE" ps db | grep -q "healthy"; then
+            log_success "PostgreSQL is healthy"
+            return 0
+        fi
+
+        echo -n "."
+        sleep 2
+        retries=$((retries + 1))
+    done
+
+    echo ""
+    log_error "PostgreSQL did not become healthy after $max_retries attempts"
+    docker compose --env-file "$ENV_FILE" -f "$COMPOSE_FILE" logs db | tail -50
+    return 1
+}
+
 run_migrations() {
     log_info "Running database migrations..."
+
+    # Ensure database is healthy before attempting migrations
+    if ! ensure_database_healthy; then
+        log_error "Cannot run migrations - database is not healthy"
+        return 1
+    fi
 
     # Use bundled Prisma CLI directly (deterministic, no npx package resolution)
     if ! docker compose --env-file "$ENV_FILE" -f "$COMPOSE_FILE" run --rm app node_modules/.bin/prisma migrate deploy; then
@@ -275,15 +319,32 @@ run_migrations() {
 }
 
 restart_application() {
-    log_info "Restarting application..."
+    log_info "Restarting application and database services..."
 
+    # Start db service (will replace loyalty-db-1 with loyalty-postgres container)
+    # Uses existing loyalty-postgres-data volume
+    log_info "Starting database service..."
+    if ! docker compose --env-file "$ENV_FILE" -f "$COMPOSE_FILE" up -d db; then
+        log_error "Failed to start database service"
+        docker compose --env-file "$ENV_FILE" -f "$COMPOSE_FILE" logs db | tail -50
+        return 1
+    fi
+
+    # Wait for database health
+    if ! ensure_database_healthy; then
+        log_error "Database failed health check after restart"
+        return 1
+    fi
+
+    # Start app service (will replace with loyalty-app container)
+    log_info "Starting application service..."
     if ! docker compose --env-file "$ENV_FILE" -f "$COMPOSE_FILE" up -d --force-recreate --no-deps app; then
         log_error "Failed to restart application"
         docker compose --env-file "$ENV_FILE" -f "$COMPOSE_FILE" logs app | tail -50
         return 1
     fi
 
-    log_success "Application restarted"
+    log_success "Application and database restarted"
     return 0
 }
 
