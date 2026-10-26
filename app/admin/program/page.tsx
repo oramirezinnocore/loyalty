@@ -134,8 +134,14 @@ export default async function ProgramPage() {
           </>
         ) : (
           <Card>
-            <CardContent className="p-6 text-center">
-              <p className="text-gray-600">No hay programa activo configurado</p>
+            <CardContent className="p-8 text-center">
+              <p className="text-gray-600 text-lg mb-4">No hay programa de lealtad configurado</p>
+              <Link
+                href="/admin/program/new"
+                className="inline-block bg-blue-600 text-white px-6 py-3 rounded-lg font-medium hover:bg-blue-700"
+              >
+                Crear programa de lealtad
+              </Link>
             </CardContent>
           </Card>
         )}

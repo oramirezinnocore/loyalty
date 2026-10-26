@@ -1,11 +1,31 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 
+interface BusinessData {
+  business: {
+    name: string
+    slug: string
+    brandColor: string | null
+  }
+  program: {
+    name: string
+    publicDescription: string | null
+    pointsRequired: number
+    rewardDefinitions: Array<{
+      name: string
+      description: string | null
+    }>
+  }
+}
+
 export default function JoinPage({ params }: { params: { businessSlug: string } }) {
+  const [businessData, setBusinessData] = useState<BusinessData | null>(null)
+  const [loadingData, setLoadingData] = useState(true)
+  const [dataError, setDataError] = useState('')
   const router = useRouter()
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
@@ -15,6 +35,21 @@ export default function JoinPage({ params }: { params: { businessSlug: string } 
     phone: '',
     termsAccepted: false
   })
+
+  useEffect(() => {
+    // Fetch business and program data
+    fetch(`/api/business/${params.businessSlug}/program`)
+      .then(res => res.json())
+      .then(data => {
+        if (data.error) {
+          setDataError(data.error)
+        } else {
+          setBusinessData(data)
+        }
+      })
+      .catch(() => setDataError('Error al cargar el programa'))
+      .finally(() => setLoadingData(false))
+  }, [params.businessSlug])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -52,13 +87,43 @@ export default function JoinPage({ params }: { params: { businessSlug: string } 
     }
   }
 
+  if (loadingData) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500 mx-auto"></div>
+          <p className="mt-4 text-gray-600">Cargando...</p>
+        </div>
+      </div>
+    )
+  }
+
+  if (dataError || !businessData) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
+        <Card className="w-full max-w-md">
+          <CardContent className="p-6 text-center">
+            <p className="text-red-600">{dataError || 'Programa no encontrado'}</p>
+          </CardContent>
+        </Card>
+      </div>
+    )
+  }
+
+  const brandColor = businessData.business.brandColor || '#F97316'
+  const reward = businessData.program.rewardDefinitions[0]
+
   return (
     <div className="min-h-screen bg-gradient-to-b from-orange-50 to-white flex items-center justify-center p-4">
       <Card className="w-full max-w-md">
-        <div className="bg-gradient-to-r from-orange-500 to-red-500 text-white p-6 rounded-t-lg">
-          <h1 className="text-2xl font-bold text-center">Cono Churro</h1>
-          <p className="text-center mt-2 text-orange-100">
-            Compra 9 churros y recibe el 10 gratis
+        <div
+          className="text-white p-6 rounded-t-lg"
+          style={{ background: `linear-gradient(135deg, ${brandColor} 0%, ${brandColor}dd 100%)` }}
+        >
+          <h1 className="text-2xl font-bold text-center">{businessData.business.name}</h1>
+          <p className="text-center mt-2 opacity-90">
+            {businessData.program.publicDescription ||
+             `Completa ${businessData.program.pointsRequired} compras y recibe ${reward?.name || 'una recompensa'}`}
           </p>
         </div>
 
@@ -66,7 +131,8 @@ export default function JoinPage({ params }: { params: { businessSlug: string } 
           <div className="mb-6">
             <h2 className="text-xl font-semibold mb-2">¡Únete a nuestro programa!</h2>
             <p className="text-gray-600">
-              En la compra de 9 churros, el décimo va por nuestra cuenta.
+              {businessData.program.publicDescription ||
+               `Completa ${businessData.program.pointsRequired} compras y recibe ${reward?.name || 'una recompensa'}`}
             </p>
           </div>
 
@@ -127,7 +193,10 @@ export default function JoinPage({ params }: { params: { businessSlug: string } 
             <Button
               type="submit"
               disabled={loading}
-              className="w-full bg-gradient-to-r from-orange-500 to-red-500 hover:from-orange-600 hover:to-red-600"
+              className="w-full"
+              style={{
+                background: `linear-gradient(135deg, ${brandColor} 0%, ${brandColor}dd 100%)`
+              }}
               size="lg"
             >
               {loading ? 'Creando tu monedero...' : 'Quiero mi monedero'}
