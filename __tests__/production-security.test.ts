@@ -161,6 +161,15 @@ describe('Production Security', () => {
 
   describe('Tenant Isolation', () => {
     it('should enforce business scoping in customer queries', async () => {
+      // Clean up any existing test businesses first
+      await prisma.business.deleteMany({
+        where: {
+          slug: {
+            in: ['business-1-isolation', 'business-2-isolation']
+          }
+        }
+      })
+
       // This test verifies that customer lookups are always scoped to business
       const business1 = await prisma.business.create({
         data: {

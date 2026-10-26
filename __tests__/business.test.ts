@@ -154,11 +154,11 @@ describe('Business', () => {
         })
       ).rejects.toThrow()
 
-      // Clean up
-      await prisma.business.delete({ where: { id: business.id } })
+      // Clean up - handle cascade deletes
       if (result) {
-        await prisma.business.delete({ where: { id: result.id } })
+        await prisma.business.delete({ where: { id: result.id } }).catch(() => {})
       }
+      await prisma.business.delete({ where: { id: business.id } }).catch(() => {})
     })
 
     it('should enforce unique customer email per business', async () => {
