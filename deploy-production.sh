@@ -128,18 +128,18 @@ build_application() {
 
     export GIT_SHA="$git_sha"
 
-    if ! docker compose --env-file "$ENV_FILE" -f "$COMPOSE_FILE" build --no-cache loyalty-app; then
+    if ! docker compose --env-file "$ENV_FILE" -f "$COMPOSE_FILE" build --no-cache app; then
         log_error "Application build failed"
         exit 1
     fi
 
-    log_success "Application image built: loyalty-app:$git_sha"
+    log_success "Application image built: app:$git_sha"
 }
 
 start_database() {
     log_info "Starting PostgreSQL..."
 
-    if ! docker compose --env-file "$ENV_FILE" -f "$COMPOSE_FILE" up -d loyalty-postgres; then
+    if ! docker compose --env-file "$ENV_FILE" -f "$COMPOSE_FILE" up -d db; then
         log_error "Failed to start PostgreSQL"
         exit 1
     fi
@@ -147,7 +147,7 @@ start_database() {
     log_info "Waiting for PostgreSQL health..."
     local retries=0
     while [[ $retries -lt 30 ]]; do
-        if docker compose --env-file "$ENV_FILE" -f "$COMPOSE_FILE" ps loyalty-postgres | grep -q "healthy"; then
+        if docker compose --env-file "$ENV_FILE" -f "$COMPOSE_FILE" ps db | grep -q "healthy"; then
             log_success "PostgreSQL is healthy"
             return 0
         fi
@@ -156,7 +156,7 @@ start_database() {
     done
 
     log_error "PostgreSQL did not become healthy"
-    docker compose --env-file "$ENV_FILE" -f "$COMPOSE_FILE" logs loyalty-postgres
+    docker compose --env-file "$ENV_FILE" -f "$COMPOSE_FILE" logs db
     exit 1
 }
 
@@ -165,9 +165,9 @@ run_migrations() {
 
     # Run migrations using bundled Prisma CLI (deterministic, no network downloads)
     # Use explicit path to ensure we use the bundled Prisma 5.22.0
-    if ! docker compose --env-file "$ENV_FILE" -f "$COMPOSE_FILE" run --rm loyalty-app node_modules/.bin/prisma migrate deploy; then
+    if ! docker compose --env-file "$ENV_FILE" -f "$COMPOSE_FILE" run --rm app node_modules/.bin/prisma migrate deploy; then
         log_error "Database migrations failed"
-        docker compose --env-file "$ENV_FILE" -f "$COMPOSE_FILE" logs loyalty-postgres
+        docker compose --env-file "$ENV_FILE" -f "$COMPOSE_FILE" logs db
         exit 1
     fi
 
@@ -177,9 +177,9 @@ run_migrations() {
 start_application() {
     log_info "Starting application..."
 
-    if ! docker compose --env-file "$ENV_FILE" -f "$COMPOSE_FILE" up -d loyalty-app; then
+    if ! docker compose --env-file "$ENV_FILE" -f "$COMPOSE_FILE" up -d app; then
         log_error "Failed to start application"
-        docker compose --env-file "$ENV_FILE" -f "$COMPOSE_FILE" logs loyalty-app
+        docker compose --env-file "$ENV_FILE" -f "$COMPOSE_FILE" logs app
         exit 1
     fi
 
@@ -210,7 +210,7 @@ wait_for_health() {
     echo ""
     log_error "Application did not become healthy"
     log_error "Health check URL: $health_url"
-    docker compose --env-file "$ENV_FILE" -f "$COMPOSE_FILE" logs loyalty-app | tail -50
+    docker compose --env-file "$ENV_FILE" -f "$COMPOSE_FILE" logs app | tail -50
     exit 1
 }
 
@@ -232,10 +232,10 @@ show_useful_commands() {
     echo "  docker compose --env-file $ENV_FILE -f $COMPOSE_FILE ps"
     echo ""
     echo "  # View application logs"
-    echo "  docker compose --env-file $ENV_FILE -f $COMPOSE_FILE logs -f loyalty-app"
+    echo "  docker compose --env-file $ENV_FILE -f $COMPOSE_FILE logs -f app"
     echo ""
     echo "  # View database logs"
-    echo "  docker compose --env-file $ENV_FILE -f $COMPOSE_FILE logs -f loyalty-postgres"
+    echo "  docker compose --env-file $ENV_FILE -f $COMPOSE_FILE logs -f db"
     echo ""
     echo "  # Check health"
     echo "  curl http://127.0.0.1:${app_port}/api/health"

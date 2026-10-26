@@ -207,12 +207,12 @@ build_new_version() {
 
     export GIT_SHA="$git_sha"
 
-    if ! docker compose --env-file "$ENV_FILE" -f "$COMPOSE_FILE" build --no-cache loyalty-app; then
+    if ! docker compose --env-file "$ENV_FILE" -f "$COMPOSE_FILE" build --no-cache app; then
         log_error "Application build failed"
         return 1
     fi
 
-    log_success "New version built: loyalty-app:$git_sha"
+    log_success "New version built: app:$git_sha"
     return 0
 }
 
@@ -220,9 +220,9 @@ run_migrations() {
     log_info "Running database migrations..."
 
     # Use bundled Prisma CLI directly (deterministic, no npx package resolution)
-    if ! docker compose --env-file "$ENV_FILE" -f "$COMPOSE_FILE" run --rm loyalty-app node_modules/.bin/prisma migrate deploy; then
+    if ! docker compose --env-file "$ENV_FILE" -f "$COMPOSE_FILE" run --rm app node_modules/.bin/prisma migrate deploy; then
         log_error "Database migrations failed"
-        docker compose --env-file "$ENV_FILE" -f "$COMPOSE_FILE" logs loyalty-postgres | tail -50
+        docker compose --env-file "$ENV_FILE" -f "$COMPOSE_FILE" logs db | tail -50
         return 1
     fi
 
@@ -233,9 +233,9 @@ run_migrations() {
 restart_application() {
     log_info "Restarting application..."
 
-    if ! docker compose --env-file "$ENV_FILE" -f "$COMPOSE_FILE" up -d --force-recreate --no-deps loyalty-app; then
+    if ! docker compose --env-file "$ENV_FILE" -f "$COMPOSE_FILE" up -d --force-recreate --no-deps app; then
         log_error "Failed to restart application"
-        docker compose --env-file "$ENV_FILE" -f "$COMPOSE_FILE" logs loyalty-app | tail -50
+        docker compose --env-file "$ENV_FILE" -f "$COMPOSE_FILE" logs app | tail -50
         return 1
     fi
 
@@ -280,7 +280,7 @@ rollback_application() {
 
     # Capture failed version logs
     log_rollback "Capturing failed version logs..."
-    docker compose --env-file "$ENV_FILE" -f "$COMPOSE_FILE" logs loyalty-app > "/tmp/loyalty-failed-${AFTER_SHA}.log" 2>&1
+    docker compose --env-file "$ENV_FILE" -f "$COMPOSE_FILE" logs app > "/tmp/loyalty-failed-${AFTER_SHA}.log" 2>&1
     log_info "Failed logs saved to: /tmp/loyalty-failed-${AFTER_SHA}.log"
 
     # Restore source tree
@@ -296,7 +296,7 @@ rollback_application() {
     git_sha=$(git rev-parse --short HEAD)
     export GIT_SHA="$git_sha"
 
-    if ! docker compose --env-file "$ENV_FILE" -f "$COMPOSE_FILE" build --no-cache loyalty-app; then
+    if ! docker compose --env-file "$ENV_FILE" -f "$COMPOSE_FILE" build --no-cache app; then
         log_error "CRITICAL: Failed to build previous version"
         show_recovery_commands
         exit 1
@@ -304,7 +304,7 @@ rollback_application() {
 
     # Restart previous version
     log_rollback "Starting previous application version..."
-    if ! docker compose --env-file "$ENV_FILE" -f "$COMPOSE_FILE" up -d --force-recreate --no-deps loyalty-app; then
+    if ! docker compose --env-file "$ENV_FILE" -f "$COMPOSE_FILE" up -d --force-recreate --no-deps app; then
         log_error "CRITICAL: Failed to start previous version"
         show_recovery_commands
         exit 1
@@ -336,10 +336,10 @@ show_recovery_commands() {
     docker compose --env-file "$ENV_FILE" -f "$COMPOSE_FILE" ps
     echo ""
     echo "View logs:"
-    echo "  docker compose --env-file $ENV_FILE -f $COMPOSE_FILE logs loyalty-app"
+    echo "  docker compose --env-file $ENV_FILE -f $COMPOSE_FILE logs app"
     echo ""
     echo "Database status:"
-    echo "  docker compose --env-file $ENV_FILE -f $COMPOSE_FILE ps loyalty-postgres"
+    echo "  docker compose --env-file $ENV_FILE -f $COMPOSE_FILE ps db"
     echo ""
 }
 
@@ -381,7 +381,7 @@ show_success() {
     docker compose --env-file "$ENV_FILE" -f "$COMPOSE_FILE" ps
     echo ""
     echo "Useful commands:"
-    echo "  docker compose --env-file $ENV_FILE -f $COMPOSE_FILE logs -f loyalty-app"
+    echo "  docker compose --env-file $ENV_FILE -f $COMPOSE_FILE logs -f app"
     echo "  curl http://127.0.0.1:${app_port}/api/health"
     echo ""
 }
