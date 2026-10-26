@@ -96,6 +96,11 @@ describe('Admin Bootstrap - Database Operations', () => {
     })
   })
 
+  afterAll(async () => {
+    // Ensure Prisma disconnects after all tests
+    await prisma.$disconnect()
+  })
+
   it('creates SUPER_ADMIN with hashed password', async () => {
     const hashedPassword = await bcrypt.hash(testPassword, 12)
 

@@ -188,9 +188,8 @@ describe('Business', () => {
         })
       ).rejects.toThrow()
 
-      // Clean up
-      await prisma.customer.deleteMany({ where: { businessId: business.id } })
-      await prisma.business.delete({ where: { id: business.id } })
+      // Clean up - customers are cascade deleted via onDelete: Cascade
+      await prisma.business.delete({ where: { id: business.id } }).catch(() => {})
     })
   })
 })
