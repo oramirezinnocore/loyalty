@@ -32,35 +32,72 @@ const BCRYPT_ROUNDS = 12;
 
 /**
  * Read input from stdin without echoing (for passwords)
+ * Uses process.stdin.setRawMode for proper TTY handling
  */
 function readHidden(prompt) {
-  return new Promise((resolve) => {
-    const rl = readline.createInterface({
-      input: process.stdin,
-      output: process.stdout
-    });
+  return new Promise((resolve, reject) => {
+    // Write prompt
+    process.stdout.write(prompt);
 
-    // Disable echo by using a custom output stream
-    const output = {
-      write: (str) => {
-        // Only write the prompt, not the input
-        if (str === prompt) {
-          process.stdout.write(str);
+    let input = '';
+    const stdin = process.stdin;
+
+    // Check if stdin is a TTY (terminal)
+    if (!stdin.isTTY) {
+      // Fallback for non-TTY (piped input, testing)
+      const rl = readline.createInterface({
+        input: stdin,
+        output: process.stdout,
+        terminal: false
+      });
+
+      rl.once('line', (line) => {
+        rl.close();
+        process.stdout.write('\n');
+        resolve(line);
+      });
+      return;
+    }
+
+    // TTY mode: disable echo manually
+    stdin.setRawMode(true);
+    stdin.resume();
+    stdin.setEncoding('utf8');
+
+    const onData = (char) => {
+      // Handle different control characters
+      if (char === '\u0003') {
+        // Ctrl+C
+        cleanup();
+        process.stdout.write('\n');
+        reject(new Error('Cancelled by user'));
+        process.exit(1);
+      } else if (char === '\r' || char === '\n') {
+        // Enter key
+        cleanup();
+        process.stdout.write('\n');
+        resolve(input);
+      } else if (char === '\u007f' || char === '\b') {
+        // Backspace
+        if (input.length > 0) {
+          input = input.slice(0, -1);
+          // Move cursor back, write space, move back again
+          process.stdout.write('\b \b');
         }
+      } else if (char >= ' ' && char <= '~') {
+        // Printable characters only
+        input += char;
+        // Don't echo the character (that's the point of hidden input)
       }
     };
 
-    const rlHidden = readline.createInterface({
-      input: process.stdin,
-      output: output,
-      terminal: true
-    });
+    const cleanup = () => {
+      stdin.removeListener('data', onData);
+      stdin.setRawMode(false);
+      stdin.pause();
+    };
 
-    rlHidden.question(prompt, (answer) => {
-      rlHidden.close();
-      process.stdout.write('\n'); // New line after hidden input
-      resolve(answer);
-    });
+    stdin.on('data', onData);
   });
 }
 
