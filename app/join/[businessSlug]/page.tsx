@@ -38,8 +38,8 @@ export default function JoinPage({ params }: { params: { businessSlug: string } 
   })
 
   useEffect(() => {
-    // Fetch business and program data
-    fetch(`/api/business/${params.businessSlug}/program`)
+    // Fetch business and program data from public API
+    fetch(`/api/public/business/${params.businessSlug}/program`)
       .then(res => res.json())
       .then(data => {
         if (data.error) {
