@@ -105,10 +105,21 @@ export default function WalletPage() {
         className="text-white p-6"
         style={{ background: `linear-gradient(135deg, ${brandColor} 0%, ${brandColor}dd 100%)` }}
       >
-        <h1 className="text-2xl font-bold">{membership.loyaltyProgram.business.name}</h1>
-        <p className="text-sm opacity-90 mt-1">
-          {membership.customer.firstName} {membership.customer.lastName || ''}
-        </p>
+        <div className="flex items-center gap-4">
+          {membership.loyaltyProgram.business.logoUrl && (
+            <img
+              src={membership.loyaltyProgram.business.logoUrl}
+              alt={membership.loyaltyProgram.business.name}
+              className="w-16 h-16 object-contain bg-white rounded-lg p-2"
+            />
+          )}
+          <div className="flex-1">
+            <h1 className="text-2xl font-bold">{membership.loyaltyProgram.business.name}</h1>
+            <p className="text-sm opacity-90 mt-1">
+              {membership.customer.firstName} {membership.customer.lastName || ''}
+            </p>
+          </div>
+        </div>
       </div>
 
       <div className="p-4 space-y-4">

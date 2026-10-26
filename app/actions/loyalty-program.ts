@@ -468,7 +468,7 @@ export async function deleteLoyaltyProgram(
       }
     }
 
-    // 3. Check for activity
+    // 3. Check for activity - verify NO historical data exists
     const membershipCount = program._count.memberships
 
     if (membershipCount > 0) {
@@ -478,7 +478,7 @@ export async function deleteLoyaltyProgram(
       }
     }
 
-    // Additional check for transactions (via memberships)
+    // Check for transactions (via memberships)
     const transactionCount = await prisma.transaction.count({
       where: {
         membership: {
@@ -491,6 +491,40 @@ export async function deleteLoyaltyProgram(
       return {
         success: false,
         error: 'No se puede eliminar un programa con transacciones. Finaliza el programa en su lugar.'
+      }
+    }
+
+    // Check for earned rewards
+    const earnedRewardCount = await prisma.earnedReward.count({
+      where: {
+        membership: {
+          loyaltyProgramId: programId
+        }
+      }
+    })
+
+    if (earnedRewardCount > 0) {
+      return {
+        success: false,
+        error: 'No se puede eliminar un programa con recompensas ganadas. Finaliza el programa en su lugar.'
+      }
+    }
+
+    // Check for redemptions (via earned rewards)
+    const redemptionCount = await prisma.redemption.count({
+      where: {
+        earnedReward: {
+          membership: {
+            loyaltyProgramId: programId
+          }
+        }
+      }
+    })
+
+    if (redemptionCount > 0) {
+      return {
+        success: false,
+        error: 'No se puede eliminar un programa con canjes realizados. Finaliza el programa en su lugar.'
       }
     }
 

@@ -1,5 +1,5 @@
 import { prisma } from './prisma'
-import { EarnedRewardStatus, TransactionType } from '@prisma/client'
+import { EarnedRewardStatus, TransactionType, LoyaltyProgramStatus } from '@prisma/client'
 import { canPerformLoyaltyOperations } from './billing-enforcement'
 import { syncMembershipToWallet } from './wallet/google-wallet'
 import { syncMembershipToAppleWallet } from './wallet/apple-wallet'
@@ -33,6 +33,12 @@ export async function registerPurchase(membershipId: string, businessId: string,
   }
 
   const program = membership.loyaltyProgram
+
+  // PAUSED/ARCHIVED programs cannot earn new points
+  if (program.status !== 'ACTIVE') {
+    throw new Error('El programa de lealtad no está activo. No se pueden registrar compras.')
+  }
+
   const goal = program.pointsRequired
   const currentPoints = membership.currentPoints
 
@@ -110,7 +116,8 @@ export async function redeemReward(earnedRewardId: string, businessId: string, r
     include: {
       membership: {
         include: {
-          customer: true
+          customer: true,
+          loyaltyProgram: true
         }
       },
       redemption: true
@@ -132,6 +139,16 @@ export async function redeemReward(earnedRewardId: string, businessId: string, r
   if (earnedReward.redemption) {
     throw new Error('Reward already redeemed')
   }
+
+  // Check program status
+  const programStatus = earnedReward.membership.loyaltyProgram.status
+
+  // ARCHIVED programs cannot redeem (historical data only)
+  if (programStatus === LoyaltyProgramStatus.ARCHIVED) {
+    throw new Error('El programa ha finalizado. No se pueden canjear recompensas.')
+  }
+
+  // ACTIVE and PAUSED: allow redemption of AVAILABLE rewards earned before pause
 
   // Redeem atomically
   const result = await prisma.$transaction(async (tx) => {

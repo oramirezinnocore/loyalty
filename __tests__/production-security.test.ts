@@ -90,7 +90,7 @@ describe('Production Security', () => {
         data: {
           businessId: business.id,
           name: 'Token Test Program 2',
-          status: 'ACTIVE',
+          status: 'PAUSED', // Use PAUSED to avoid unique ACTIVE constraint
           pointsRequired: 10
         }
       })

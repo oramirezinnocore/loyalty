@@ -548,7 +548,9 @@ describe('Loyalty Program Lifecycle', () => {
       const result = await deleteLoyaltyProgram(createResult.programId!)
 
       expect(result.success).toBe(false)
-      expect(result.error).toContain('transacciones')
+      // Note: Transaction existence is protected via membership check
+      // (transactions require memberships, so membership check fires first)
+      expect(result.error).toContain('clientes registrados')
     })
   })
 
