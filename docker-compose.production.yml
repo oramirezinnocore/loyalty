@@ -3,9 +3,9 @@ services:
     image: postgres:16-alpine
     container_name: loyalty-postgres
     environment:
-      POSTGRES_USER: loyalty
+      POSTGRES_USER: ${DB_USER}
       POSTGRES_PASSWORD: ${DB_PASSWORD}
-      POSTGRES_DB: loyalty
+      POSTGRES_DB: ${DB_NAME}
     volumes:
       - loyalty-postgres-data:/var/lib/postgresql/data
     ports:
@@ -25,7 +25,7 @@ services:
     ports:
       - "3000:3000"
     environment:
-      DATABASE_URL: postgresql://loyalty:${DB_PASSWORD}@db:5432/loyalty
+      DATABASE_URL: postgresql://${DB_USER}:${DB_PASSWORD}@db:5432/${DB_NAME}
       NEXTAUTH_URL: ${NEXTAUTH_URL}
       NEXTAUTH_SECRET: ${NEXTAUTH_SECRET}
       MERCADOPAGO_ACCESS_TOKEN: ${MERCADOPAGO_ACCESS_TOKEN}
