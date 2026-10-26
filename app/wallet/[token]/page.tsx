@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
+import { useParams } from 'next/navigation'
 import { Card, CardContent } from '@/components/ui/card'
 import { QRGenerator } from '@/components/qr-generator'
 import GoogleWalletButton from './google-wallet-button'
@@ -40,13 +41,22 @@ interface WalletData {
   }
 }
 
-export default function WalletPage({ params }: { params: { token: string } }) {
+export default function WalletPage() {
+  const params = useParams()
+  const token = params.token as string
+
   const [data, setData] = useState<WalletData | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
 
   useEffect(() => {
-    fetch(`/api/wallet/${params.token}`)
+    if (!token) {
+      setError('Token inválido')
+      setLoading(false)
+      return
+    }
+
+    fetch(`/api/wallet/${token}`)
       .then(res => res.json())
       .then(data => {
         if (data.error) {
@@ -57,7 +67,7 @@ export default function WalletPage({ params }: { params: { token: string } }) {
       })
       .catch(() => setError('Error al cargar tu monedero'))
       .finally(() => setLoading(false))
-  }, [params.token])
+  }, [token])
 
   if (loading) {
     return (

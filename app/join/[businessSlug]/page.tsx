@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { useRouter } from 'next/navigation'
+import { useRouter, useParams } from 'next/navigation'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 
@@ -23,8 +23,11 @@ interface BusinessData {
   } | null
 }
 
-export default function JoinPage({ params }: { params: { businessSlug: string } }) {
+export default function JoinPage() {
   const router = useRouter()
+  const params = useParams()
+  const businessSlug = params.businessSlug as string
+
   const [businessData, setBusinessData] = useState<BusinessData | null>(null)
   const [loadingData, setLoadingData] = useState(true)
   const [dataError, setDataError] = useState('')
@@ -38,8 +41,15 @@ export default function JoinPage({ params }: { params: { businessSlug: string } 
   })
 
   useEffect(() => {
+    // Next.js 16 Client Components must use useParams() hook, not params prop
+    if (!businessSlug) {
+      setDataError('Error al cargar el programa')
+      setLoadingData(false)
+      return
+    }
+
     // Fetch business and program data from public API
-    fetch(`/api/public/business/${params.businessSlug}/program`)
+    fetch(`/api/public/business/${businessSlug}/program`)
       .then(res => res.json())
       .then(data => {
         if (data.error) {
@@ -50,7 +60,7 @@ export default function JoinPage({ params }: { params: { businessSlug: string } 
       })
       .catch(() => setDataError('Error al cargar el programa'))
       .finally(() => setLoadingData(false))
-  }, [params.businessSlug])
+  }, [businessSlug])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -68,7 +78,7 @@ export default function JoinPage({ params }: { params: { businessSlug: string } 
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          businessSlug: params.businessSlug,
+          businessSlug,
           ...formData
         })
       })
