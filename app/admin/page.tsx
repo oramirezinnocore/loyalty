@@ -2,18 +2,85 @@ import { redirect } from 'next/navigation'
 import { getSession, getUserBusinesses } from '@/lib/authorization'
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card'
 import { formatDateTime } from '@/lib/utils'
+import { prisma } from '@/lib/prisma'
 import Link from 'next/link'
 
 export const instant = false
 
 async function getBusinessStats(businessId: string) {
-  const response = await fetch(`${process.env.NEXTAUTH_URL}/api/stats/business/${businessId}`, {
-    cache: 'no-store'
-  })
+  // Direct database access instead of HTTP fetch
+  // Server Component already has auth context, no need for internal API call
+  try {
+    const [
+      customerCount,
+      transactionCount,
+      availableRewardsCount,
+      redeemedRewardsCount,
+      recentTransactions
+    ] = await Promise.all([
+      prisma.customer.count({ where: { businessId } }),
+      prisma.transaction.count({
+        where: {
+          membership: {
+            customer: {
+              businessId
+            }
+          }
+        }
+      }),
+      prisma.earnedReward.count({
+        where: {
+          status: 'AVAILABLE',
+          membership: {
+            customer: {
+              businessId
+            }
+          }
+        }
+      }),
+      prisma.earnedReward.count({
+        where: {
+          status: 'REDEEMED',
+          membership: {
+            customer: {
+              businessId
+            }
+          }
+        }
+      }),
+      prisma.transaction.findMany({
+        where: {
+          membership: {
+            customer: {
+              businessId
+            }
+          }
+        },
+        include: {
+          membership: {
+            include: {
+              customer: true
+            }
+          }
+        },
+        orderBy: { createdAt: 'desc' },
+        take: 10
+      })
+    ])
 
-  if (!response.ok) return null
-
-  return response.json()
+    return {
+      stats: {
+        customers: customerCount,
+        transactions: transactionCount,
+        availableRewards: availableRewardsCount,
+        redeemedRewards: redeemedRewardsCount
+      },
+      recentTransactions
+    }
+  } catch (error) {
+    console.error('Stats fetch error:', error)
+    return null
+  }
 }
 
 export default async function AdminDashboard() {

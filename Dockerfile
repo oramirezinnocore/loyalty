@@ -65,10 +65,11 @@ RUN mkdir -p node_modules/.bin && \
 # Verify Prisma CLI works at build time (catches packaging issues early)
 RUN node_modules/.bin/prisma --version
 
-# Create Next.js cache directory with correct ownership
-# The nextjs user needs write access for runtime cache
-RUN mkdir -p .next/cache && \
-    chown -R nextjs:nodejs .next/cache
+# Create Next.js runtime directories with correct ownership
+# The nextjs user needs write access for runtime cache, prerender cache, and route cache
+# Next.js dynamically creates subdirectories under .next/ at runtime
+RUN mkdir -p .next/cache .next/server && \
+    chown -R nextjs:nodejs .next
 
 # Security assertion: Verify NO production secrets in final image
 # Build MUST fail if forbidden env files leaked into image

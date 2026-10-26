@@ -1,7 +1,8 @@
 import { redirect } from 'next/navigation'
 import { getSession, getUserBusinesses } from '@/lib/authorization'
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card'
-import { QRGenerator, downloadQR } from '@/components/qr-generator'
+import { QRGenerator } from '@/components/qr-generator'
+import { QRDownloadButton } from '@/components/qr-download-button'
 import { prisma } from '@/lib/prisma'
 import Link from 'next/link'
 
@@ -119,16 +120,10 @@ export default async function ProgramPage() {
                   </p>
                 </div>
 
-                <button
-                  onClick={() => {
-                    if (typeof window !== 'undefined') {
-                      (window as any).downloadQR?.(acquisitionUrl, `${business.slug}-registro.png`)
-                    }
-                  }}
-                  className="w-full px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
-                >
-                  Descargar QR
-                </button>
+                <QRDownloadButton
+                  acquisitionUrl={acquisitionUrl}
+                  businessSlug={business.slug}
+                />
               </CardContent>
             </Card>
           </>
