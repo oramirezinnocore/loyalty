@@ -50,6 +50,9 @@ COPY --from=builder /app/node_modules/@prisma ./node_modules/@prisma
 # Must copy complete package with all assets (WASM, binaries, build dir)
 COPY --from=builder /app/node_modules/prisma ./node_modules/prisma
 
+# Copy production admin bootstrap script
+COPY --from=builder --chown=nextjs:nodejs /app/scripts/create-super-admin.js ./scripts/create-super-admin.js
+
 # Recreate .bin symlink for Prisma CLI (npm normally creates this)
 # The symlink must point to ../prisma/build/index.js so WASM files resolve correctly
 RUN mkdir -p node_modules/.bin && \
@@ -71,6 +74,10 @@ RUN if ls .env .env.local .env.production .env.production.local 2>/dev/null | gr
       ls -la .env* 2>/dev/null && \
       exit 1; \
     fi
+
+# Production readiness assertion: Verify admin bootstrap script exists
+RUN test -f /app/scripts/create-super-admin.js || \
+    (echo "ERROR: Admin bootstrap script missing" && exit 1)
 
 USER nextjs
 

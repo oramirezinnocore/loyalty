@@ -45,13 +45,43 @@ sudo ./deploy-production.sh
 curl https://loyalty.intuspath.com/api/health
 ```
 
+## Quick Start After First Install
+
+Once deployed, the production workflow is streamlined:
+
+### Deploy Updates
+
+```bash
+cd /opt/loyalty
+./update-production.sh
+```
+
+Automatically handles: build, migrate, restart, health check, rollback on failure.
+
+### Create Initial Super Admin
+
+```bash
+cd /opt/loyalty
+./create-production-admin.sh
+```
+
+Interactive prompts for: email, name, password (hidden input).
+
+### Login
+
+Open: **https://loyalty.intuspath.com**
+
+- Root `/` automatically redirects to login if not authenticated
+- After login, SUPER_ADMIN → `/super-admin`, BUSINESS_ADMIN → `/admin`
+- No Next.js starter content, production-ready interface
+
 ## Future Updates
 
 Production updates are automated with rollback protection:
 
 ```bash
 cd /opt/loyalty
-sudo ./update-production.sh
+./update-production.sh
 ```
 
 The update script automatically:
@@ -428,9 +458,27 @@ curl https://yourdomain.com/api/health
 
 ### Create the First Super Admin
 
-Run the secure bootstrap script inside the production container:
+Use the production helper script (recommended):
 
 ```bash
+cd /opt/loyalty
+./create-production-admin.sh
+```
+
+**What it does:**
+- Detects current Git SHA
+- Verifies correct Docker image exists
+- Runs admin bootstrap interactively
+- Never defaults to `:latest` tag
+- Fails safely if image missing
+
+**Alternative (manual):**
+
+```bash
+# Set current SHA
+export GIT_SHA=$(git rev-parse --short HEAD)
+
+# Run bootstrap
 docker compose --env-file .env.production -f docker-compose.production.yml \
   run --rm loyalty-app node scripts/create-super-admin.js
 ```
