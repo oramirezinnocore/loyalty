@@ -14,7 +14,7 @@
  *
  * Usage (production):
  *   docker compose --env-file .env.production -f docker-compose.production.yml \
- *     run --rm loyalty-app node scripts/create-super-admin.js
+ *     run --rm app node scripts/create-super-admin.js
  *
  * Usage (local development):
  *   node scripts/create-super-admin.js
