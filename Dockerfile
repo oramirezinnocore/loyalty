@@ -71,6 +71,13 @@ RUN node_modules/.bin/prisma --version
 RUN mkdir -p .next/cache .next/server && \
     chown -R nextjs:nodejs .next
 
+# Create uploads directory for persistent business assets (logos)
+# Mounted as named volume in production: loyalty-uploads:/app/uploads
+# Must be writable by nextjs user (UID 1001)
+RUN mkdir -p uploads/businesses && \
+    chown -R nextjs:nodejs uploads && \
+    chmod 755 uploads
+
 # Security assertion: Verify NO production secrets in final image
 # Build MUST fail if forbidden env files leaked into image
 RUN if ls .env .env.local .env.production .env.production.local 2>/dev/null | grep -q .; then \

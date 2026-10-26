@@ -3,8 +3,10 @@ import { getSession, getUserBusinesses } from '@/lib/authorization'
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card'
 import { QRGenerator } from '@/components/qr-generator'
 import { QRDownloadButton } from '@/components/qr-download-button'
+import { ProgramLifecycle } from './program-lifecycle'
 import { prisma } from '@/lib/prisma'
 import Link from 'next/link'
+import { Button } from '@/components/ui/button'
 
 export const instant = false
 
@@ -23,7 +25,9 @@ export default async function ProgramPage() {
   }
 
   const business = businesses[0]
-  const program = await prisma.loyaltyProgram.findFirst({
+
+  // Fetch ACTIVE program
+  const activeProgram = await prisma.loyaltyProgram.findFirst({
     where: {
       businessId: business.id,
       status: 'ACTIVE'
@@ -31,11 +35,57 @@ export default async function ProgramPage() {
     include: {
       rewardDefinitions: {
         where: { isActive: true }
+      },
+      _count: {
+        select: {
+          memberships: true
+        }
       }
     }
   })
 
+  // Fetch historical programs (PAUSED or ARCHIVED)
+  const historicalPrograms = await prisma.loyaltyProgram.findMany({
+    where: {
+      businessId: business.id,
+      status: {
+        in: ['PAUSED', 'ARCHIVED']
+      }
+    },
+    include: {
+      rewardDefinitions: {
+        where: { isActive: true }
+      },
+      _count: {
+        select: {
+          memberships: true
+        }
+      }
+    },
+    orderBy: {
+      createdAt: 'desc'
+    }
+  })
+
   const acquisitionUrl = `${process.env.NEXTAUTH_URL}/join/${business.slug}`
+
+  const statusBadge = (status: string) => {
+    const styles: Record<string, string> = {
+      ACTIVE: 'bg-green-100 text-green-800',
+      PAUSED: 'bg-yellow-100 text-yellow-800',
+      ARCHIVED: 'bg-gray-100 text-gray-800'
+    }
+    const labels: Record<string, string> = {
+      ACTIVE: 'ACTIVO',
+      PAUSED: 'PAUSADO',
+      ARCHIVED: 'FINALIZADO'
+    }
+    return (
+      <span className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-medium ${styles[status] || ''}`}>
+        {labels[status] || status}
+      </span>
+    )
+  }
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -49,61 +99,63 @@ export default async function ProgramPage() {
       </div>
 
       <div className="max-w-4xl mx-auto px-4 py-6 space-y-6">
-        {program ? (
+        {/* Current ACTIVE Program */}
+        {activeProgram ? (
           <>
-            {/* Program Details */}
             <Card>
               <CardHeader>
-                <CardTitle>Detalles del programa</CardTitle>
+                <div className="flex items-start justify-between">
+                  <div>
+                    <CardTitle className="text-xl mb-2">{activeProgram.name}</CardTitle>
+                    {statusBadge(activeProgram.status)}
+                  </div>
+                </div>
               </CardHeader>
               <CardContent>
                 <div className="space-y-4">
                   <div>
-                    <label className="block text-sm font-medium text-gray-700">Nombre</label>
-                    <p className="mt-1 text-lg">{program.name}</p>
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700">Descripción pública</label>
-                    <p className="mt-1">{program.publicDescription}</p>
+                    <p className="text-gray-700">{activeProgram.publicDescription}</p>
                   </div>
 
                   <div className="grid grid-cols-2 gap-4">
                     <div>
-                      <label className="block text-sm font-medium text-gray-700">Meta</label>
-                      <p className="mt-1 text-2xl font-bold text-blue-600">{program.pointsRequired} compras</p>
+                      <label className="block text-sm font-medium text-gray-500">Meta</label>
+                      <p className="mt-1 text-2xl font-bold text-blue-600">{activeProgram.pointsRequired} compras</p>
                     </div>
-
                     <div>
-                      <label className="block text-sm font-medium text-gray-700">Estado</label>
-                      <p className="mt-1">
-                        <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-green-100 text-green-800">
-                          {program.status}
-                        </span>
-                      </p>
+                      <label className="block text-sm font-medium text-gray-500">Clientes inscritos</label>
+                      <p className="mt-1 text-2xl font-bold text-gray-900">{activeProgram._count.memberships}</p>
                     </div>
                   </div>
 
-                  {program.rewardDefinitions.length > 0 && (
+                  {activeProgram.rewardDefinitions.length > 0 && (
                     <div>
-                      <label className="block text-sm font-medium text-gray-700">Recompensa</label>
-                      <div className="mt-1 bg-orange-50 border border-orange-200 rounded-lg p-4">
+                      <label className="block text-sm font-medium text-gray-500 mb-2">Recompensa</label>
+                      <div className="bg-orange-50 border border-orange-200 rounded-lg p-4">
                         <p className="font-semibold text-orange-900">
-                          {program.rewardDefinitions[0].name}
+                          {activeProgram.rewardDefinitions[0].name}
                         </p>
-                        {program.rewardDefinitions[0].description && (
+                        {activeProgram.rewardDefinitions[0].description && (
                           <p className="text-sm text-orange-700 mt-1">
-                            {program.rewardDefinitions[0].description}
+                            {activeProgram.rewardDefinitions[0].description}
                           </p>
                         )}
                       </div>
                     </div>
                   )}
+
+                  <div className="border-t pt-4">
+                    <ProgramLifecycle
+                      programId={activeProgram.id}
+                      status={activeProgram.status}
+                      hasMemberships={activeProgram._count.memberships > 0}
+                    />
+                  </div>
                 </div>
               </CardContent>
             </Card>
 
-            {/* Acquisition QR */}
+            {/* QR Code - Only for ACTIVE programs */}
             <Card>
               <CardHeader>
                 <CardTitle>Código QR de registro</CardTitle>
@@ -130,7 +182,7 @@ export default async function ProgramPage() {
         ) : (
           <Card>
             <CardContent className="p-8 text-center">
-              <p className="text-gray-600 text-lg mb-4">No hay programa de lealtad configurado</p>
+              <p className="text-gray-600 text-lg mb-4">No hay programa de lealtad activo</p>
               <Link
                 href="/admin/program/new"
                 className="inline-block bg-blue-600 text-white px-6 py-3 rounded-lg font-medium hover:bg-blue-700"
@@ -139,6 +191,67 @@ export default async function ProgramPage() {
               </Link>
             </CardContent>
           </Card>
+        )}
+
+        {/* Historical Programs */}
+        {historicalPrograms.length > 0 && (
+          <div>
+            <h2 className="text-lg font-semibold mb-3">Historial de programas</h2>
+            <div className="space-y-3">
+              {historicalPrograms.map((program) => (
+                <Card key={program.id}>
+                  <CardContent className="p-4">
+                    <div className="flex items-start justify-between">
+                      <div className="flex-1">
+                        <div className="flex items-center gap-2 mb-2">
+                          <h3 className="font-semibold">{program.name}</h3>
+                          {statusBadge(program.status)}
+                        </div>
+                        <p className="text-sm text-gray-600 mb-2">{program.publicDescription}</p>
+                        <div className="text-sm text-gray-500">
+                          <span>Meta: {program.pointsRequired} compras</span>
+                          <span className="mx-2">•</span>
+                          <span>Clientes: {program._count.memberships}</span>
+                          {program.rewardDefinitions[0] && (
+                            <>
+                              <span className="mx-2">•</span>
+                              <span>Recompensa: {program.rewardDefinitions[0].name}</span>
+                            </>
+                          )}
+                        </div>
+                        <div className="text-xs text-gray-400 mt-2">
+                          Creado: {new Date(program.createdAt).toLocaleDateString('es-MX', { year: 'numeric', month: 'long', day: 'numeric' })}
+                        </div>
+                      </div>
+                      <div className="ml-4">
+                        <ProgramLifecycle
+                          programId={program.id}
+                          status={program.status}
+                          hasMemberships={program._count.memberships > 0}
+                        />
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Create New Program Button */}
+        {(activeProgram || historicalPrograms.length > 0) && (
+          <div className="pt-4 border-t">
+            <Link href="/admin/program/new">
+              <Button variant="outline" className="w-full">
+                + Crear nuevo programa
+              </Button>
+            </Link>
+            {activeProgram && (
+              <p className="text-xs text-gray-500 text-center mt-2">
+                Nota: Pausa o finaliza el programa actual antes de activar otro
+              </p>
+            )}
+          </div>
         )}
       </div>
     </div>

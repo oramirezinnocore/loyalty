@@ -19,6 +19,7 @@ export interface PublicProgramData {
     name: string
     slug: string
     brandColor: string | null
+    logoUrl: string | null
     status: BusinessStatus
   }
   program: {
@@ -66,6 +67,7 @@ export async function getPublicBusinessProgramBySlug(
         name: true,
         slug: true,
         brandColor: true,
+        logoUrl: true,
         status: true
       }
     })

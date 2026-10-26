@@ -149,6 +149,12 @@ export async function createLoyaltyProgram(
 /**
  * Update loyalty program status
  * TENANT-SAFE: Verifies business ownership
+ * Enforces lifecycle transitions:
+ * - ACTIVE -> PAUSED
+ * - ACTIVE -> ARCHIVED
+ * - PAUSED -> ACTIVE
+ * - PAUSED -> ARCHIVED
+ * - ARCHIVED is terminal (cannot transition to any state)
  */
 export async function updateProgramStatus(
   programId: string,
@@ -199,7 +205,30 @@ export async function updateProgramStatus(
       }
     }
 
-    // 4. Check for existing ACTIVE program when activating
+    // 4. ARCHIVED is terminal - cannot be changed
+    if (program.status === LoyaltyProgramStatus.ARCHIVED) {
+      return {
+        success: false,
+        error: 'No se puede cambiar el estado de un programa finalizado'
+      }
+    }
+
+    // 5. Validate allowed transitions
+    const validTransitions: Record<LoyaltyProgramStatus, LoyaltyProgramStatus[]> = {
+      [LoyaltyProgramStatus.DRAFT]: [LoyaltyProgramStatus.ACTIVE, LoyaltyProgramStatus.PAUSED],
+      [LoyaltyProgramStatus.ACTIVE]: [LoyaltyProgramStatus.PAUSED, LoyaltyProgramStatus.ARCHIVED],
+      [LoyaltyProgramStatus.PAUSED]: [LoyaltyProgramStatus.ACTIVE, LoyaltyProgramStatus.ARCHIVED],
+      [LoyaltyProgramStatus.ARCHIVED]: [] // Terminal
+    }
+
+    if (!validTransitions[program.status].includes(newStatus)) {
+      return {
+        success: false,
+        error: `No se puede cambiar de ${program.status} a ${newStatus}`
+      }
+    }
+
+    // 6. Check for existing ACTIVE program when activating
     if (newStatus === LoyaltyProgramStatus.ACTIVE) {
       const existingActiveProgram = await prisma.loyaltyProgram.findFirst({
         where: {
@@ -217,15 +246,16 @@ export async function updateProgramStatus(
       }
     }
 
-    // 5. Update status
+    // 7. Update status
     await prisma.loyaltyProgram.update({
       where: { id: programId },
       data: { status: newStatus }
     })
 
-    // 6. Revalidate cache
+    // 8. Revalidate cache
     revalidatePath('/admin/program')
     revalidatePath('/admin')
+    revalidatePath(`/join/${businesses[0].slug}`)
 
     return {
       success: true,
@@ -244,6 +274,7 @@ export async function updateProgramStatus(
 /**
  * Update loyalty program details
  * TENANT-SAFE: Verifies business ownership
+ * ARCHIVED programs cannot be edited
  */
 export async function updateLoyaltyProgram(
   programId: string,
@@ -291,7 +322,15 @@ export async function updateLoyaltyProgram(
       }
     }
 
-    // 3. Input validation
+    // 3. Block editing ARCHIVED programs
+    if (program.status === LoyaltyProgramStatus.ARCHIVED) {
+      return {
+        success: false,
+        error: 'No se puede editar un programa finalizado'
+      }
+    }
+
+    // 4. Input validation
     const fieldErrors: Record<string, string> = {}
 
     if (input.name !== undefined) {
@@ -325,7 +364,7 @@ export async function updateLoyaltyProgram(
       }
     }
 
-    // 4. Atomic transaction: Update program + reward
+    // 5. Atomic transaction: Update program + reward
     await prisma.$transaction(async (tx) => {
       // Update program
       const updateData: any = {}
@@ -356,9 +395,11 @@ export async function updateLoyaltyProgram(
       }
     })
 
-    // 5. Revalidate cache
+    // 6. Revalidate cache
     revalidatePath('/admin/program')
+    revalidatePath(`/admin/program/${programId}/edit`)
     revalidatePath('/admin')
+    revalidatePath(`/join/${businesses[0].slug}`)
 
     return {
       success: true,
@@ -370,6 +411,107 @@ export async function updateLoyaltyProgram(
     return {
       success: false,
       error: 'Error al actualizar el programa'
+    }
+  }
+}
+
+/**
+ * Delete loyalty program (hard delete)
+ * ONLY allowed if program has NO activity (memberships, transactions, rewards)
+ * TENANT-SAFE: Verifies business ownership
+ */
+export async function deleteLoyaltyProgram(
+  programId: string
+): Promise<CreateProgramResult> {
+  try {
+    // 1. Authentication & Authorization
+    const session = await getSession()
+    if (!session?.user) {
+      return {
+        success: false,
+        error: 'Unauthorized: Authentication required'
+      }
+    }
+
+    const user = session.user as any
+    const businesses = await getUserBusinesses(user.id, user.role)
+
+    if (businesses.length === 0) {
+      return {
+        success: false,
+        error: 'No business access'
+      }
+    }
+
+    const businessId = businesses[0].id
+
+    // 2. Verify program ownership
+    const program = await prisma.loyaltyProgram.findFirst({
+      where: {
+        id: programId,
+        businessId // Tenant isolation
+      },
+      include: {
+        memberships: true,
+        _count: {
+          select: {
+            memberships: true
+          }
+        }
+      }
+    })
+
+    if (!program) {
+      return {
+        success: false,
+        error: 'Programa no encontrado'
+      }
+    }
+
+    // 3. Check for activity
+    const membershipCount = program._count.memberships
+
+    if (membershipCount > 0) {
+      return {
+        success: false,
+        error: 'No se puede eliminar un programa con clientes registrados. Finaliza el programa en su lugar.'
+      }
+    }
+
+    // Additional check for transactions (via memberships)
+    const transactionCount = await prisma.transaction.count({
+      where: {
+        membership: {
+          loyaltyProgramId: programId
+        }
+      }
+    })
+
+    if (transactionCount > 0) {
+      return {
+        success: false,
+        error: 'No se puede eliminar un programa con transacciones. Finaliza el programa en su lugar.'
+      }
+    }
+
+    // 4. Delete program (CASCADE will delete reward definitions)
+    await prisma.loyaltyProgram.delete({
+      where: { id: programId }
+    })
+
+    // 5. Revalidate cache
+    revalidatePath('/admin/program')
+    revalidatePath('/admin')
+
+    return {
+      success: true
+    }
+  } catch (error: any) {
+    console.error('Program deletion failed:', error)
+
+    return {
+      success: false,
+      error: 'Error al eliminar el programa'
     }
   }
 }

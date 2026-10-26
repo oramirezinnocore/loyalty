@@ -1,86 +1,40 @@
+version: '3.8'
+
 services:
-  loyalty-postgres:
+  db:
     image: postgres:16-alpine
-    container_name: loyalty-postgres
-    restart: unless-stopped
-    networks:
-      - loyalty-network
+    environment:
+      POSTGRES_USER: loyalty
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+      POSTGRES_DB: loyalty
     volumes:
       - loyalty-postgres-data:/var/lib/postgresql/data
-    environment:
-      POSTGRES_DB: ${POSTGRES_DB:-intus_loyalty}
-      POSTGRES_USER: ${POSTGRES_USER:-loyalty_user}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD required}
-      POSTGRES_INITDB_ARGS: "--encoding=UTF8 --locale=en_US.UTF-8"
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-loyalty_user} -d ${POSTGRES_DB:-intus_loyalty}"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-      start_period: 30s
-    # CRITICAL: No ports exposed to host (internal network only)
+    ports:
+      - "5432:5432"
+    restart: unless-stopped
 
-  loyalty-app:
+  app:
     build:
       context: .
       dockerfile: Dockerfile
-    image: loyalty-app:${GIT_SHA:-latest}
-    container_name: loyalty-app
-    restart: unless-stopped
-    depends_on:
-      loyalty-postgres:
-        condition: service_healthy
-    networks:
-      - loyalty-network
     ports:
-      # Bind ONLY to localhost, never 0.0.0.0
-      - "127.0.0.1:${APP_PORT:-3005}:3000"
+      - "3000:3000"
     environment:
-      # Database
-      DATABASE_URL: ${DATABASE_URL:?DATABASE_URL required}
-
-      # Authentication
-      NEXTAUTH_URL: ${NEXTAUTH_URL:?NEXTAUTH_URL required}
-      NEXTAUTH_SECRET: ${NEXTAUTH_SECRET:?NEXTAUTH_SECRET required}
-
-      # Application
-      NEXT_PUBLIC_APP_URL: ${NEXT_PUBLIC_APP_URL:?NEXT_PUBLIC_APP_URL required}
-      NODE_ENV: production
-
-      # Cron
-      CRON_SECRET: ${CRON_SECRET:?CRON_SECRET required}
-
-      # Billing
-      BILLING_GRACE_PERIOD_DAYS: ${BILLING_GRACE_PERIOD_DAYS:-3}
-
-      # Mercado Pago
-      MERCADO_PAGO_ACCESS_TOKEN: ${MERCADO_PAGO_ACCESS_TOKEN:-}
-      MERCADO_PAGO_WEBHOOK_SECRET: ${MERCADO_PAGO_WEBHOOK_SECRET:-}
-
-      # Google Wallet (optional)
-      GOOGLE_WALLET_ISSUER_ID: ${GOOGLE_WALLET_ISSUER_ID:-}
-      GOOGLE_WALLET_SERVICE_ACCOUNT_EMAIL: ${GOOGLE_WALLET_SERVICE_ACCOUNT_EMAIL:-}
-      GOOGLE_WALLET_PRIVATE_KEY: ${GOOGLE_WALLET_PRIVATE_KEY:-}
-
-      # Apple Wallet (optional)
-      APPLE_PASS_TYPE_IDENTIFIER: ${APPLE_PASS_TYPE_IDENTIFIER:-}
-      APPLE_TEAM_IDENTIFIER: ${APPLE_TEAM_IDENTIFIER:-}
-      APPLE_PASS_CERTIFICATE: ${APPLE_PASS_CERTIFICATE:-}
-      APPLE_PASS_PRIVATE_KEY: ${APPLE_PASS_PRIVATE_KEY:-}
-      APPLE_WWDR_CERTIFICATE: ${APPLE_WWDR_CERTIFICATE:-}
-      APPLE_PASS_PRIVATE_KEY_PASSWORD: ${APPLE_PASS_PRIVATE_KEY_PASSWORD:-}
-    healthcheck:
-      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://127.0.0.1:3000/api/health"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-      start_period: 60s
-
-networks:
-  loyalty-network:
-    name: loyalty-network
-    driver: bridge
+      DATABASE_URL: postgresql://loyalty:${DB_PASSWORD}@db:5432/loyalty
+      NEXTAUTH_URL: ${NEXTAUTH_URL}
+      NEXTAUTH_SECRET: ${NEXTAUTH_SECRET}
+      MERCADOPAGO_ACCESS_TOKEN: ${MERCADOPAGO_ACCESS_TOKEN}
+      GOOGLE_SERVICE_ACCOUNT_EMAIL: ${GOOGLE_SERVICE_ACCOUNT_EMAIL}
+      GOOGLE_PRIVATE_KEY: ${GOOGLE_PRIVATE_KEY}
+    volumes:
+      # Persistent uploads volume - survives container recreation and deployments
+      - loyalty-uploads:/app/uploads
+    depends_on:
+      - db
+    restart: unless-stopped
 
 volumes:
+  # PostgreSQL data - NEVER delete with -v flag
   loyalty-postgres-data:
-    name: loyalty-postgres-data
+  # User uploads (business logos) - NEVER delete with -v flag
+  loyalty-uploads:

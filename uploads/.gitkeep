@@ -1,0 +1,3 @@
+# Uploads directory for persistent business assets
+# This directory is mounted as a Docker volume in production
+# DO NOT commit actual uploaded files

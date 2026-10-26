@@ -29,6 +29,7 @@ enum LoyaltyProgramStatus {
   DRAFT
   ACTIVE
   PAUSED
+  ARCHIVED
 }
 
 enum TransactionType {
