@@ -1,8 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { formatPhone } from '@/lib/utils'
-import { LoyaltyProgramStatus } from '@prisma/client'
 import { canPerformLoyaltyOperations } from '@/lib/billing-enforcement'
+import { resolveBusinessForRegistration } from '@/lib/services/public-program'
 
 export async function POST(request: NextRequest) {
   try {
@@ -16,21 +16,8 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Find business and ACTIVE loyalty program
-    const business = await prisma.business.findUnique({
-      where: { slug: businessSlug },
-      include: {
-        loyaltyPrograms: {
-          where: { status: LoyaltyProgramStatus.ACTIVE },
-          include: {
-            rewardDefinitions: {
-              where: { isActive: true }
-            }
-          },
-          take: 1
-        }
-      }
-    })
+    // Find business and ACTIVE loyalty program using shared service
+    const business = await resolveBusinessForRegistration(businessSlug)
 
     // CRITICAL: Verify business exists
     if (!business) {
