@@ -23,7 +23,7 @@ services:
       dockerfile: Dockerfile
     container_name: loyalty-app
     ports:
-      - "3000:3000"
+      - "127.0.0.1:3005:3000"
     environment:
       DATABASE_URL: postgresql://${DB_USER}:${DB_PASSWORD}@db:5432/${DB_NAME}
       NEXTAUTH_URL: ${NEXTAUTH_URL}
