@@ -112,11 +112,26 @@ describe('Root Routing', () => {
       expect(content).toContain('scripts/create-super-admin.js')
     })
 
+    it('should copy bcryptjs runtime dependency', () => {
+      const dockerfilePath = path.join(process.cwd(), 'Dockerfile')
+      const content = fs.readFileSync(dockerfilePath, 'utf-8')
+
+      expect(content).toContain('node_modules/bcryptjs')
+    })
+
     it('should assert admin script exists in final image', () => {
       const dockerfilePath = path.join(process.cwd(), 'Dockerfile')
       const content = fs.readFileSync(dockerfilePath, 'utf-8')
 
       expect(content).toContain('test -f /app/scripts/create-super-admin.js')
+    })
+
+    it('should validate runtime dependencies at build time', () => {
+      const dockerfilePath = path.join(process.cwd(), 'Dockerfile')
+      const content = fs.readFileSync(dockerfilePath, 'utf-8')
+
+      expect(content).toContain("require('@prisma/client')")
+      expect(content).toContain("require('bcryptjs')")
     })
 
     it('should assert no secret env files in final image', () => {

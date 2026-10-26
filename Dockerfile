@@ -53,6 +53,9 @@ COPY --from=builder /app/node_modules/prisma ./node_modules/prisma
 # Copy production admin bootstrap script
 COPY --from=builder --chown=nextjs:nodejs /app/scripts/create-super-admin.js ./scripts/create-super-admin.js
 
+# Copy bcryptjs (required by admin bootstrap, not traced by Next.js standalone)
+COPY --from=builder /app/node_modules/bcryptjs ./node_modules/bcryptjs
+
 # Recreate .bin symlink for Prisma CLI (npm normally creates this)
 # The symlink must point to ../prisma/build/index.js so WASM files resolve correctly
 RUN mkdir -p node_modules/.bin && \
@@ -78,6 +81,11 @@ RUN if ls .env .env.local .env.production .env.production.local 2>/dev/null | gr
 # Production readiness assertion: Verify admin bootstrap script exists
 RUN test -f /app/scripts/create-super-admin.js || \
     (echo "ERROR: Admin bootstrap script missing" && exit 1)
+
+# Runtime dependency validation: Verify operational dependencies resolve
+RUN node -e "require('@prisma/client'); console.log('✓ Prisma Client OK')"
+RUN node -e "require('bcryptjs'); console.log('✓ bcryptjs OK')"
+RUN node -e "require('./scripts/create-super-admin.js'); console.log('✓ Admin script imports OK')"
 
 USER nextjs
 
