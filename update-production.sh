@@ -435,12 +435,7 @@ ensure_database_healthy() {
 run_migrations() {
     log_info "Running database migrations..."
 
-    # Ensure database is healthy before attempting migrations
-    if ! ensure_database_healthy; then
-        log_error "Cannot run migrations - database is not healthy"
-        return 1
-    fi
-
+    # Database health already verified by restart_database()
     # Use bundled Prisma CLI directly (deterministic, no npx package resolution)
     if ! docker compose --env-file "$ENV_FILE" -f "$COMPOSE_FILE" run --rm app node_modules/.bin/prisma migrate deploy; then
         log_error "Database migrations failed"
