@@ -10,6 +10,7 @@ interface BusinessData {
     name: string
     slug: string
     brandColor: string | null
+    status: string
   }
   program: {
     name: string
@@ -19,14 +20,14 @@ interface BusinessData {
       name: string
       description: string | null
     }>
-  }
+  } | null
 }
 
 export default function JoinPage({ params }: { params: { businessSlug: string } }) {
+  const router = useRouter()
   const [businessData, setBusinessData] = useState<BusinessData | null>(null)
   const [loadingData, setLoadingData] = useState(true)
   const [dataError, setDataError] = useState('')
-  const router = useRouter()
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
   const [formData, setFormData] = useState({
@@ -87,6 +88,7 @@ export default function JoinPage({ params }: { params: { businessSlug: string } 
     }
   }
 
+  // Loading state
   if (loadingData) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
@@ -98,20 +100,60 @@ export default function JoinPage({ params }: { params: { businessSlug: string } 
     )
   }
 
+  // Error state - business not found
   if (dataError || !businessData) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
         <Card className="w-full max-w-md">
-          <CardContent className="p-6 text-center">
-            <p className="text-red-600">{dataError || 'Programa no encontrado'}</p>
+          <CardContent className="p-8 text-center">
+            <div className="text-5xl mb-4">❌</div>
+            <h2 className="text-xl font-semibold mb-2 text-gray-900">
+              {dataError === 'Negocio no encontrado' ? 'Negocio no encontrado' :
+               dataError === 'El programa de lealtad no está disponible temporalmente' ? 'Programa no disponible' :
+               dataError === 'No hay programa activo configurado' ? 'Sin programa activo' :
+               'Error'}
+            </h2>
+            <p className="text-gray-600">
+              {dataError || 'No se pudo cargar la información del programa'}
+            </p>
           </CardContent>
         </Card>
       </div>
     )
   }
 
+  // No active program state
+  if (!businessData.program) {
+    const brandColor = businessData.business.brandColor || '#6B7280'
+
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
+        <Card className="w-full max-w-md">
+          <div
+            className="text-white p-6 rounded-t-lg"
+            style={{ background: `linear-gradient(135deg, ${brandColor} 0%, ${brandColor}dd 100%)` }}
+          >
+            <h1 className="text-2xl font-bold text-center">{businessData.business.name}</h1>
+          </div>
+          <CardContent className="p-8 text-center">
+            <div className="text-5xl mb-4">🎁</div>
+            <h2 className="text-xl font-semibold mb-2 text-gray-900">
+              Programa de lealtad
+            </h2>
+            <p className="text-gray-600">
+              Este negocio aún no tiene un programa de lealtad activo.
+            </p>
+          </CardContent>
+        </Card>
+      </div>
+    )
+  }
+
+  // Active program state - show registration form
   const brandColor = businessData.business.brandColor || '#F97316'
   const reward = businessData.program.rewardDefinitions[0]
+  const programDescription = businessData.program.publicDescription ||
+    `Completa ${businessData.program.pointsRequired} compras y recibe ${reward?.name || 'una recompensa'}`
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-orange-50 to-white flex items-center justify-center p-4">
@@ -122,8 +164,7 @@ export default function JoinPage({ params }: { params: { businessSlug: string } 
         >
           <h1 className="text-2xl font-bold text-center">{businessData.business.name}</h1>
           <p className="text-center mt-2 opacity-90">
-            {businessData.program.publicDescription ||
-             `Completa ${businessData.program.pointsRequired} compras y recibe ${reward?.name || 'una recompensa'}`}
+            {programDescription}
           </p>
         </div>
 
@@ -131,8 +172,7 @@ export default function JoinPage({ params }: { params: { businessSlug: string } 
           <div className="mb-6">
             <h2 className="text-xl font-semibold mb-2">¡Únete a nuestro programa!</h2>
             <p className="text-gray-600">
-              {businessData.program.publicDescription ||
-               `Completa ${businessData.program.pointsRequired} compras y recibe ${reward?.name || 'una recompensa'}`}
+              {programDescription}
             </p>
           </div>
 
@@ -199,7 +239,7 @@ export default function JoinPage({ params }: { params: { businessSlug: string } 
               }}
               size="lg"
             >
-              {loading ? 'Creando tu monedero...' : 'Quiero mi monedero'}
+              {loading ? 'Creando tu monedero...' : 'Unirme al programa'}
             </Button>
           </form>
         </CardContent>

@@ -16,34 +16,65 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Find business
+    // Find business and ACTIVE loyalty program
     const business = await prisma.business.findUnique({
       where: { slug: businessSlug },
       include: {
         loyaltyPrograms: {
           where: { status: LoyaltyProgramStatus.ACTIVE },
+          include: {
+            rewardDefinitions: {
+              where: { isActive: true }
+            }
+          },
           take: 1
         }
       }
     })
 
-    if (!business || business.loyaltyPrograms.length === 0) {
+    // CRITICAL: Verify business exists
+    if (!business) {
       return NextResponse.json(
-        { error: 'Business or program not found' },
+        { error: 'Negocio no encontrado' },
         { status: 404 }
       )
     }
 
-    // Check if business can perform loyalty operations
-    const canOperate = await canPerformLoyaltyOperations(business.id)
-    if (!canOperate) {
+    // CRITICAL: Verify business is ACTIVE
+    if (business.status !== 'ACTIVE') {
       return NextResponse.json(
-        { error: 'El programa de lealtad no está disponible temporalmente.' },
-        { status: 503 }
+        { error: 'El programa de lealtad no está disponible temporalmente' },
+        { status: 403 }
+      )
+    }
+
+    // CRITICAL: Verify ACTIVE program exists
+    if (business.loyaltyPrograms.length === 0) {
+      return NextResponse.json(
+        { error: 'No hay programa de lealtad activo' },
+        { status: 400 }
       )
     }
 
     const program = business.loyaltyPrograms[0]
+
+    // CRITICAL: Verify program has active reward definitions
+    if (program.rewardDefinitions.length === 0) {
+      return NextResponse.json(
+        { error: 'Programa no configurado correctamente' },
+        { status: 400 }
+      )
+    }
+
+    // Check if business can perform loyalty operations (billing)
+    const canOperate = await canPerformLoyaltyOperations(business.id)
+    if (!canOperate) {
+      return NextResponse.json(
+        { error: 'El programa de lealtad no está disponible temporalmente' },
+        { status: 503 }
+      )
+    }
+
     const normalizedPhone = formatPhone(phone)
 
     // Check if customer already exists
@@ -66,6 +97,7 @@ export async function POST(request: NextRequest) {
     // If customer exists with membership, return existing
     if (existingCustomer && existingCustomer.memberships.length > 0) {
       return NextResponse.json({
+        customer: existingCustomer,
         membership: existingCustomer.memberships[0],
         existing: true
       })
@@ -91,7 +123,7 @@ export async function POST(request: NextRequest) {
       }
     })
 
-    return NextResponse.json({ membership, existing: false })
+    return NextResponse.json({ customer, membership, existing: false })
   } catch (error) {
     console.error('Customer registration error:', error)
     return NextResponse.json(

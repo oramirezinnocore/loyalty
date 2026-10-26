@@ -33,13 +33,15 @@ export async function GET(
       )
     }
 
-    // Find active program
+    // Find active program for THIS business
     const program = await prisma.loyaltyProgram.findFirst({
       where: {
         business: { slug },
         status: 'ACTIVE'
       },
       select: {
+        id: true,
+        businessId: true,
         name: true,
         publicDescription: true,
         pointsRequired: true,
@@ -53,16 +55,10 @@ export async function GET(
       }
     })
 
-    if (!program) {
-      return NextResponse.json(
-        { error: 'No hay programa activo configurado' },
-        { status: 404 }
-      )
-    }
-
+    // Return business info even if no program (for proper UI state)
     return NextResponse.json({
       business,
-      program
+      program: program || null
     })
   } catch (error: any) {
     console.error('Program lookup error:', error)
