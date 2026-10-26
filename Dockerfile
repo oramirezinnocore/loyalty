@@ -64,6 +64,14 @@ RUN node_modules/.bin/prisma --version
 RUN mkdir -p .next/cache && \
     chown -R nextjs:nodejs .next/cache
 
+# Security assertion: Verify NO production secrets in final image
+# Build MUST fail if forbidden env files leaked into image
+RUN if ls .env .env.local .env.production .env.production.local 2>/dev/null | grep -q .; then \
+      echo "SECURITY ERROR: Secret .env files found in image:" && \
+      ls -la .env* 2>/dev/null && \
+      exit 1; \
+    fi
+
 USER nextjs
 
 EXPOSE 3000

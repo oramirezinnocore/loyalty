@@ -6,6 +6,16 @@ npm-debug.log
 .git
 .gitignore
 README.md
+.DS_Store
+*.log
+
+# CRITICAL SECURITY: Exclude ALL environment files with secrets
+# Only .env.example should be available (for documentation)
+.env
+.env.*
+!.env.example
+
+# Exclude development/test artifacts
 .env*.local
 .vscode
 .claude
@@ -14,5 +24,3 @@ README.md
 .agents
 __tests__
 coverage
-.DS_Store
-*.log
