@@ -60,6 +60,20 @@ describe('Production Security', () => {
   })
 
   describe('CUID Token Security', () => {
+    beforeEach(async () => {
+      // Clean up test data before each test
+      await prisma.business.deleteMany({
+        where: { slug: 'token-test-biz' }
+      })
+    })
+
+    afterEach(async () => {
+      // Clean up after tests
+      await prisma.business.deleteMany({
+        where: { slug: 'token-test-biz' }
+      })
+    })
+
     it('should generate non-sequential membership tokens', async () => {
       const businessId = 'test-business-id'
 
