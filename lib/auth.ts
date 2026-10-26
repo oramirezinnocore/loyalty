@@ -52,14 +52,16 @@ export const authConfig: NextAuthConfig = {
   callbacks: {
     async jwt({ token, user }) {
       if (user) {
-        token.id = user.id as string
+        // NextAuth v5 automatically sets token.sub = user.id
+        // Add custom claims (role) but don't manually set id
         token.role = (user as any).role
       }
       return token
     },
     async session({ session, token }) {
       if (session.user) {
-        (session.user as any).id = (token as any).id
+        // Read user ID from token.sub (standard JWT claim, not token.id)
+        (session.user as any).id = token.sub as string
         (session.user as any).role = (token as any).role
       }
       return session
