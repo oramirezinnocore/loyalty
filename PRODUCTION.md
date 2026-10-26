@@ -129,9 +129,9 @@ npx prisma migrate deploy
 npx prisma db seed
 ```
 
-**Default Super Admin:**
-- Email: `super@intus.com`
-- Password: `super-admin-123` (CHANGE IMMEDIATELY)
+**DO NOT use db:seed in production** - it creates development demo data.
+
+See "Creating the Production Super Admin" section below for the secure production bootstrap process.
 
 ## Production Build
 
@@ -415,6 +415,121 @@ curl https://yourdomain.com/api/health
 # - Purchase recording
 # - Subscription creation
 ```
+
+## Creating the Production Super Admin
+
+**DO NOT use development seed in production.** The seed script creates demo data unsuitable for production.
+
+### Prerequisites
+
+- Production database migrations applied
+- Application deployed and healthy
+- Shell access to VPS
+
+### Create the First Super Admin
+
+Run the secure bootstrap script inside the production container:
+
+```bash
+docker compose --env-file .env.production -f docker-compose.production.yml \
+  run --rm loyalty-app node scripts/create-super-admin.js
+```
+
+The script will interactively prompt:
+
+```
+=== IntusPath Loyalty - Production Super Admin Bootstrap ===
+
+Email: admin@yourdomain.com
+Name: Admin User
+Password: ************
+Confirm password: ************
+
+🔐 Hashing password...
+💾 Creating SUPER_ADMIN user...
+
+✅ SUPER_ADMIN created successfully:
+   Email: admin@yourdomain.com
+   Name: Admin User
+   Role: SUPER_ADMIN
+   ID: clxxxxx...
+
+⚠️  IMPORTANT: Store the password securely. It cannot be recovered.
+```
+
+**Security features:**
+- Password is **not echoed** to terminal
+- Password is **never** in shell history
+- Password is **never** in process arguments
+- Uses bcrypt hashing (12 rounds, same as application)
+- Validates email format
+- Requires strong password (≥12 chars, letters + numbers)
+
+### Verify Super Admin Exists
+
+Check without exposing password:
+
+```bash
+docker compose --env-file .env.production -f docker-compose.production.yml \
+  exec loyalty-app node -e "
+    const { PrismaClient } = require('@prisma/client');
+    const prisma = new PrismaClient();
+    prisma.user.findMany({
+      where: { role: 'SUPER_ADMIN' },
+      select: { id: true, email: true, name: true, role: true }
+    }).then(users => {
+      console.log('SUPER_ADMIN users:', users);
+      prisma.\$disconnect();
+    });
+  "
+```
+
+Expected output:
+```javascript
+SUPER_ADMIN users: [
+  {
+    id: 'clxxxxx...',
+    email: 'admin@yourdomain.com',
+    name: 'Admin User',
+    role: 'SUPER_ADMIN'
+  }
+]
+```
+
+### Idempotency and Safety
+
+The bootstrap script is **idempotent** and safe to run multiple times:
+
+**Existing SUPER_ADMIN:**
+- Reports existing admin, exits successfully
+- Does **not** modify password
+
+**Existing non-SUPER_ADMIN:**
+- Reports current role
+- Asks for **explicit confirmation** before promotion
+- Promotion preserves existing password
+
+**Duplicate email:**
+- Prisma unique constraint prevents duplicates
+- Script reports error and exits
+
+### Promoting an Existing User
+
+If you need to promote an existing user to SUPER_ADMIN:
+
+1. Run the bootstrap script
+2. Enter the existing user's email
+3. Script detects existing user and prompts:
+   ```
+   ⚠️  User already exists:
+      Email: user@example.com
+      Name: Existing User
+      Role: BUSINESS_ADMIN
+
+   Promote this user to SUPER_ADMIN? (yes/no):
+   ```
+4. Type `yes` to confirm promotion
+5. Password is **not changed** during promotion
 
 ## Security Checklist
 

@@ -12,7 +12,8 @@
     "db:seed": "tsx prisma/seed.ts",
     "db:reset": "prisma migrate reset --force",
     "test": "jest",
-    "test:watch": "jest --watch"
+    "test:watch": "jest --watch",
+    "admin:create": "node scripts/create-super-admin.js"
   },
   "dependencies": {
     "archiver": "^8.0.0",
