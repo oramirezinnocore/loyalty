@@ -4,6 +4,7 @@ import bcrypt from "bcryptjs"
 import { prisma } from "./prisma"
 
 export const authConfig: NextAuthConfig = {
+  trustHost: true, // Trust reverse proxy (Nginx) forwarded host
   providers: [
     Credentials({
       credentials: {
