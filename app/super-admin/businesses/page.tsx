@@ -40,15 +40,22 @@ export default async function BusinessesPage() {
 
       <div className="max-w-7xl mx-auto px-4 py-6">
         <Card>
-          <CardHeader>
+          <CardHeader className="flex flex-row items-center justify-between">
             <CardTitle>All Businesses ({businesses.length})</CardTitle>
+            <Link
+              href="/super-admin/businesses/new"
+              className="bg-purple-600 text-white px-4 py-2 rounded-md font-medium hover:bg-purple-700 text-sm"
+            >
+              + Create Business
+            </Link>
           </CardHeader>
           <CardContent>
             {businesses.length > 0 ? (
               <div className="space-y-3">
                 {businesses.map(business => (
-                  <div
+                  <Link
                     key={business.id}
+                    href={`/super-admin/businesses/${business.id}`}
                     className="flex justify-between items-center p-4 bg-white border rounded-lg hover:shadow-md transition-shadow"
                   >
                     <div className="flex-1">
@@ -94,12 +101,22 @@ export default async function BusinessesPage() {
                       )}
                     </div>
 
-                    <BusinessActions businessId={business.id} currentStatus={business.status} />
-                  </div>
+                    <div onClick={(e) => e.preventDefault()}>
+                      <BusinessActions businessId={business.id} currentStatus={business.status} />
+                    </div>
+                  </Link>
                 ))}
               </div>
             ) : (
-              <p className="text-gray-500 text-center py-8">No businesses yet</p>
+              <div className="text-center py-12">
+                <p className="text-gray-500 text-lg mb-4">No businesses yet</p>
+                <Link
+                  href="/super-admin/businesses/new"
+                  className="inline-block bg-purple-600 text-white px-6 py-3 rounded-md font-medium hover:bg-purple-700"
+                >
+                  Create your first business
+                </Link>
+              </div>
             )}
           </CardContent>
         </Card>
