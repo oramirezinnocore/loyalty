@@ -480,7 +480,7 @@ export GIT_SHA=$(git rev-parse --short HEAD)
 
 # Run bootstrap
 docker compose --env-file .env.production -f docker-compose.production.yml \
-  run --rm loyalty-app node scripts/create-super-admin.js
+  run --rm app node scripts/create-super-admin.js
 ```
 
 The script will interactively prompt:
@@ -519,7 +519,7 @@ Check without exposing password:
 
 ```bash
 docker compose --env-file .env.production -f docker-compose.production.yml \
-  exec loyalty-app node -e "
+  exec app node -e "
     const { PrismaClient } = require('@prisma/client');
     const prisma = new PrismaClient();
     prisma.user.findMany({
@@ -872,16 +872,16 @@ Production deployment uses isolated Docker infrastructure:
 
 ### Services
 
-**loyalty-postgres:**
+**db:**
 - Image: postgres:16-alpine
 - Network: loyalty-network (isolated)
-- Volume: loyalty-postgres-data (persistent)
+- Volume: db-data (persistent)
 - Port: NOT exposed to host (internal only)
 - Health check: pg_isready
 - Restart: unless-stopped
 
-**loyalty-app:**
-- Image: loyalty-app:${GIT_SHA}
+**app:**
+- Image: app:${GIT_SHA}
 - Network: loyalty-network (isolated)
 - Port: 127.0.0.1:3005 → 3000 (localhost only)
 - Health check: /api/health
@@ -903,10 +903,10 @@ Production deployment uses isolated Docker infrastructure:
 docker compose --env-file .env.production -f docker-compose.production.yml ps
 
 # View application logs
-docker compose --env-file .env.production -f docker-compose.production.yml logs -f loyalty-app
+docker compose --env-file .env.production -f docker-compose.production.yml logs -f app
 
 # View database logs
-docker compose --env-file .env.production -f docker-compose.production.yml logs -f loyalty-postgres
+docker compose --env-file .env.production -f docker-compose.production.yml logs -f db
 
 # Check health
 curl http://127.0.0.1:3005/api/health
@@ -915,10 +915,10 @@ curl http://127.0.0.1:3005/api/health
 docker compose --env-file .env.production -f docker-compose.production.yml down
 
 # Restart application only
-docker compose --env-file .env.production -f docker-compose.production.yml restart loyalty-app
+docker compose --env-file .env.production -f docker-compose.production.yml restart app
 
 # View database volume
-docker volume inspect loyalty-postgres-data
+docker volume inspect db-data
 ```
 
 ## Migration Safety

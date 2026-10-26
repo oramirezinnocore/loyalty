@@ -131,6 +131,44 @@ check_requirements() {
     log_success "All requirements satisfied"
 }
 
+verify_deployment_config() {
+    log_info "Verifying deployment configuration..."
+
+    # Verify compose services exist
+    local services
+    services=$(docker compose --env-file "$ENV_FILE" -f "$COMPOSE_FILE" config --services 2>&1)
+
+    if ! echo "$services" | grep -q "^app$"; then
+        log_error "Service 'app' not found in compose configuration"
+        log_error "Available services:"
+        echo "$services"
+        exit 1
+    fi
+
+    if ! echo "$services" | grep -q "^db$"; then
+        log_error "Service 'db' not found in compose configuration"
+        log_error "Available services:"
+        echo "$services"
+        exit 1
+    fi
+
+    # Verify required environment variables (without printing values)
+    if ! grep -q "^DB_PASSWORD=." "$ENV_FILE"; then
+        log_error "DB_PASSWORD not set in $ENV_FILE"
+        log_error "This is required for production PostgreSQL"
+        exit 1
+    fi
+
+    if ! grep -q "^NEXTAUTH_SECRET=." "$ENV_FILE"; then
+        log_error "NEXTAUTH_SECRET not set in $ENV_FILE"
+        log_error "This is required for authentication"
+        exit 1
+    fi
+
+    log_success "Deployment configuration valid"
+    log_info "Services: app, db"
+}
+
 capture_current_state() {
     BEFORE_SHA=$(git rev-parse HEAD)
     log_info "Current commit: $BEFORE_SHA"
@@ -207,8 +245,14 @@ build_new_version() {
 
     export GIT_SHA="$git_sha"
 
+    # Log the exact command for debugging
+    log_info "Executing: docker compose --env-file $ENV_FILE -f $COMPOSE_FILE build --no-cache app"
+
     if ! docker compose --env-file "$ENV_FILE" -f "$COMPOSE_FILE" build --no-cache app; then
         log_error "Application build failed"
+        log_error "Expected service: app"
+        log_error "Compose file: $COMPOSE_FILE"
+        log_error "Env file: $ENV_FILE"
         return 1
     fi
 
@@ -392,6 +436,7 @@ main() {
 
     acquire_lock
     check_requirements
+    verify_deployment_config
     capture_current_state
     fetch_updates
     determine_update_strategy

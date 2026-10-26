@@ -58,7 +58,7 @@ log_info "Current commit: $CURRENT_SHA"
 export GIT_SHA="$CURRENT_SHA"
 
 # Verify image exists
-IMAGE_NAME="loyalty-app:${CURRENT_SHA}"
+IMAGE_NAME="app:${CURRENT_SHA}"
 if ! docker image inspect "$IMAGE_NAME" &> /dev/null; then
     log_error "Image $IMAGE_NAME not found"
     echo ""
@@ -82,7 +82,7 @@ log_info "  - Password confirmation"
 echo ""
 
 docker compose --env-file "$ENV_FILE" -f "$COMPOSE_FILE" \
-  run --rm loyalty-app node scripts/create-super-admin.js
+  run --rm app node scripts/create-super-admin.js
 
 EXIT_CODE=$?
 
