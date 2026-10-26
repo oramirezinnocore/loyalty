@@ -47,8 +47,17 @@ COPY --from=builder /app/prisma ./prisma
 COPY --from=builder /app/node_modules/.prisma ./node_modules/.prisma
 COPY --from=builder /app/node_modules/@prisma ./node_modules/@prisma
 # Copy Prisma CLI for migrations (needed for prisma migrate deploy)
+# Must copy complete package with all assets (WASM, binaries, build dir)
 COPY --from=builder /app/node_modules/prisma ./node_modules/prisma
-COPY --from=builder /app/node_modules/.bin/prisma ./node_modules/.bin/prisma
+
+# Recreate .bin symlink for Prisma CLI (npm normally creates this)
+# The symlink must point to ../prisma/build/index.js so WASM files resolve correctly
+RUN mkdir -p node_modules/.bin && \
+    ln -sf ../prisma/build/index.js node_modules/.bin/prisma && \
+    chown -h nextjs:nodejs node_modules/.bin/prisma
+
+# Verify Prisma CLI works at build time (catches packaging issues early)
+RUN node_modules/.bin/prisma --version
 
 USER nextjs
 

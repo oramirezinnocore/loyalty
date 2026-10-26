@@ -163,8 +163,9 @@ start_database() {
 run_migrations() {
     log_info "Running production database migrations..."
 
-    # Run migrations using application container with production environment
-    if ! docker compose --env-file "$ENV_FILE" -f "$COMPOSE_FILE" run --rm loyalty-app npx prisma migrate deploy; then
+    # Run migrations using bundled Prisma CLI (deterministic, no network downloads)
+    # Use explicit path to ensure we use the bundled Prisma 5.22.0
+    if ! docker compose --env-file "$ENV_FILE" -f "$COMPOSE_FILE" run --rm loyalty-app node_modules/.bin/prisma migrate deploy; then
         log_error "Database migrations failed"
         docker compose --env-file "$ENV_FILE" -f "$COMPOSE_FILE" logs loyalty-postgres
         exit 1

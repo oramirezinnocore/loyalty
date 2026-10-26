@@ -219,7 +219,8 @@ build_new_version() {
 run_migrations() {
     log_info "Running database migrations..."
 
-    if ! docker compose --env-file "$ENV_FILE" -f "$COMPOSE_FILE" run --rm loyalty-app npx prisma migrate deploy; then
+    # Use bundled Prisma CLI directly (deterministic, no npx package resolution)
+    if ! docker compose --env-file "$ENV_FILE" -f "$COMPOSE_FILE" run --rm loyalty-app node_modules/.bin/prisma migrate deploy; then
         log_error "Database migrations failed"
         docker compose --env-file "$ENV_FILE" -f "$COMPOSE_FILE" logs loyalty-postgres | tail -50
         return 1
