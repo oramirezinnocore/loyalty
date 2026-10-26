@@ -259,13 +259,18 @@ apply_update() {
 detect_legacy_containers() {
     log_info "Checking for legacy production containers..."
 
-    # Check if loyalty-postgres exists but is not managed by current Compose
-    if docker ps -a --filter "name=^loyalty-postgres$" --format "{{.Names}}" | grep -q "^loyalty-postgres$"; then
+    # Check if loyalty-postgres exists and verify both project AND service labels
+    if docker inspect loyalty-postgres >/dev/null 2>&1; then
         local compose_project
+        local compose_service
         compose_project=$(docker inspect loyalty-postgres --format '{{index .Config.Labels "com.docker.compose.project"}}' 2>/dev/null || echo "")
+        compose_service=$(docker inspect loyalty-postgres --format '{{index .Config.Labels "com.docker.compose.service"}}' 2>/dev/null || echo "")
 
-        if [[ -z "$compose_project" ]] || [[ "$compose_project" != "loyalty" ]]; then
+        # Legacy if labels don't EXACTLY match project=loyalty AND service=db
+        if [[ "$compose_project" != "loyalty" ]] || [[ "$compose_service" != "db" ]]; then
             log_warning "Legacy database container detected: loyalty-postgres"
+            log_warning "Labels: project='$compose_project', service='$compose_service'"
+            log_warning "Expected: project='loyalty', service='db'"
             log_warning "This container will be safely transitioned to Compose management"
             LEGACY_DB_DETECTED=true
 
@@ -275,13 +280,18 @@ detect_legacy_containers() {
         fi
     fi
 
-    # Check if loyalty-app exists but is not managed by current Compose
-    if docker ps -a --filter "name=^loyalty-app$" --format "{{.Names}}" | grep -q "^loyalty-app$"; then
+    # Check if loyalty-app exists and verify both project AND service labels
+    if docker inspect loyalty-app >/dev/null 2>&1; then
         local compose_project
+        local compose_service
         compose_project=$(docker inspect loyalty-app --format '{{index .Config.Labels "com.docker.compose.project"}}' 2>/dev/null || echo "")
+        compose_service=$(docker inspect loyalty-app --format '{{index .Config.Labels "com.docker.compose.service"}}' 2>/dev/null || echo "")
 
-        if [[ -z "$compose_project" ]] || [[ "$compose_project" != "loyalty" ]]; then
+        # Legacy if labels don't EXACTLY match project=loyalty AND service=app
+        if [[ "$compose_project" != "loyalty" ]] || [[ "$compose_service" != "app" ]]; then
             log_warning "Legacy application container detected: loyalty-app"
+            log_warning "Labels: project='$compose_project', service='$compose_service'"
+            log_warning "Expected: project='loyalty', service='app'"
             log_warning "This container will be safely transitioned to Compose management"
             LEGACY_APP_DETECTED=true
 
