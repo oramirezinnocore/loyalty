@@ -14,6 +14,8 @@ const customJestConfig = {
   transformIgnorePatterns: [
     'node_modules/(?!(next-auth|archiver|archiver-utils|compress-commons|crc32-stream|readable-stream|tar-stream|zip-stream)/)',
   ],
+  // Run tests sequentially to prevent database connection interference
+  maxWorkers: 1,
 }
 
 module.exports = createJestConfig(customJestConfig)

@@ -6,6 +6,9 @@ const prisma = new PrismaClient()
 // Import functions from the script
 const { normalizeEmail, validatePassword, isValidEmail } = require('../scripts/create-super-admin.js')
 
+// Use unique email prefix for this test suite to avoid conflicts
+const TEST_EMAIL_PREFIX = 'admin-bootstrap-test'
+
 describe('Admin Bootstrap - Validation Functions', () => {
   describe('normalizeEmail', () => {
     it('converts to lowercase', () => {

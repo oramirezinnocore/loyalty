@@ -40,11 +40,13 @@ describe('Customer Registration', () => {
   })
 
   afterAll(async () => {
+    // Clean up in correct order
     await prisma.membership.deleteMany({ where: { customer: { businessId } } })
     await prisma.customer.deleteMany({ where: { businessId } })
     await prisma.rewardDefinition.deleteMany({ where: { loyaltyProgramId: programId } })
     await prisma.loyaltyProgram.deleteMany({ where: { businessId } })
-    await prisma.business.delete({ where: { id: businessId } })
+    await prisma.subscription.deleteMany({ where: { businessId } })
+    await prisma.business.deleteMany({ where: { id: businessId } })
     await prisma.$disconnect()
   })
 

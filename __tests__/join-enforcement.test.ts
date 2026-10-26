@@ -209,12 +209,16 @@ describe('Join Page Enforcement', () => {
         })
       })
 
-      await POST(request)
+      const response = await POST(request)
+      const data = await response.json()
+
+      expect(response.status).toBe(200)
+      expect(data.customer).toBeDefined()
 
       const customer = await prisma.customer.findFirst({
         where: {
           businessId,
-          phone: '+52 55 6666 6666'
+          phone: data.customer.phone // Use actual stored phone format
         }
       })
 
@@ -446,6 +450,15 @@ describe('Join Page Enforcement', () => {
 
   describe('No Hardcoded Fallback Data', () => {
     it('should never show "Compra 9 churros" when no program exists (DB query)', async () => {
+      // Verify program exists before test
+      const programBefore = await prisma.loyaltyProgram.findUnique({
+        where: { id: programId }
+      })
+
+      if (!programBefore) {
+        throw new Error('Program not found before test - check test execution order')
+      }
+
       // Set program to DRAFT temporarily
       await prisma.loyaltyProgram.update({
         where: { id: programId },
@@ -471,7 +484,17 @@ describe('Join Page Enforcement', () => {
     })
 
     it('should never fabricate reward data', async () => {
-      // Delete reward temporarily
+      // Verify program exists
+      const programBefore = await prisma.loyaltyProgram.findUnique({
+        where: { id: programId },
+        include: { rewardDefinitions: true }
+      })
+
+      if (!programBefore || programBefore.rewardDefinitions.length === 0) {
+        throw new Error('Program or rewards not found - check test execution order')
+      }
+
+      // Deactivate rewards temporarily
       await prisma.rewardDefinition.updateMany({
         where: { loyaltyProgramId: programId },
         data: { isActive: false }
