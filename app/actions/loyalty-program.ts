@@ -3,15 +3,18 @@
 import { prisma } from '@/lib/prisma'
 import { getSession, getUserBusinesses } from '@/lib/authorization'
 import { revalidatePath } from 'next/cache'
-import { LoyaltyProgramStatus } from '@prisma/client'
+import { LoyaltyProgramStatus, ProgramType } from '@prisma/client'
 
 interface CreateProgramInput {
   name: string
   description?: string
   publicDescription?: string
+  programType: ProgramType
   pointsRequired: number
-  rewardName: string
+  reward: string
   rewardDescription?: string
+  termsAndConditions?: string
+  expirationDays?: number
   status?: LoyaltyProgramStatus
 }
 
@@ -62,16 +65,24 @@ export async function createLoyaltyProgram(
       fieldErrors.name = 'El nombre debe tener menos de 200 caracteres'
     }
 
+    if (!input.programType) {
+      fieldErrors.programType = 'El tipo de programa es requerido'
+    }
+
     if (!input.pointsRequired || input.pointsRequired < 1) {
       fieldErrors.pointsRequired = 'La meta debe ser al menos 1'
     } else if (input.pointsRequired > 100) {
       fieldErrors.pointsRequired = 'La meta no puede exceder 100'
     }
 
-    if (!input.rewardName || input.rewardName.trim().length === 0) {
-      fieldErrors.rewardName = 'El nombre de la recompensa es requerido'
-    } else if (input.rewardName.length > 200) {
-      fieldErrors.rewardName = 'El nombre de la recompensa debe tener menos de 200 caracteres'
+    if (!input.reward || input.reward.trim().length === 0) {
+      fieldErrors.reward = 'La recompensa es requerida'
+    } else if (input.reward.length > 200) {
+      fieldErrors.reward = 'La recompensa debe tener menos de 200 caracteres'
+    }
+
+    if (input.expirationDays !== undefined && input.expirationDays < 1) {
+      fieldErrors.expirationDays = 'Los días de vencimiento deben ser al menos 1'
     }
 
     if (Object.keys(fieldErrors).length > 0) {
@@ -109,16 +120,21 @@ export async function createLoyaltyProgram(
           name: input.name.trim(),
           description: input.description?.trim(),
           publicDescription: input.publicDescription?.trim(),
+          programType: input.programType,
           pointsRequired: input.pointsRequired,
+          reward: input.reward.trim(),
+          rewardDescription: input.rewardDescription?.trim(),
+          termsAndConditions: input.termsAndConditions?.trim(),
+          expirationDays: input.expirationDays,
           status: input.status || LoyaltyProgramStatus.DRAFT
         }
       })
 
-      // Create reward definition
+      // Create reward definition (backward compatibility with existing system)
       await tx.rewardDefinition.create({
         data: {
           loyaltyProgramId: program.id,
-          name: input.rewardName.trim(),
+          name: input.reward.trim(),
           description: input.rewardDescription?.trim(),
           pointsRequired: input.pointsRequired,
           isActive: true
@@ -349,12 +365,16 @@ export async function updateLoyaltyProgram(
       }
     }
 
-    if (input.rewardName !== undefined) {
-      if (!input.rewardName || input.rewardName.trim().length === 0) {
-        fieldErrors.rewardName = 'El nombre de la recompensa es requerido'
-      } else if (input.rewardName.length > 200) {
-        fieldErrors.rewardName = 'El nombre de la recompensa debe tener menos de 200 caracteres'
+    if (input.reward !== undefined) {
+      if (!input.reward || input.reward.trim().length === 0) {
+        fieldErrors.reward = 'La recompensa es requerida'
+      } else if (input.reward.length > 200) {
+        fieldErrors.reward = 'La recompensa debe tener menos de 200 caracteres'
       }
+    }
+
+    if (input.expirationDays !== undefined && input.expirationDays < 1) {
+      fieldErrors.expirationDays = 'Los días de vencimiento deben ser al menos 1'
     }
 
     if (Object.keys(fieldErrors).length > 0) {
@@ -371,19 +391,24 @@ export async function updateLoyaltyProgram(
       if (input.name) updateData.name = input.name.trim()
       if (input.description !== undefined) updateData.description = input.description?.trim()
       if (input.publicDescription !== undefined) updateData.publicDescription = input.publicDescription?.trim()
+      if (input.programType) updateData.programType = input.programType
       if (input.pointsRequired) updateData.pointsRequired = input.pointsRequired
+      if (input.reward) updateData.reward = input.reward.trim()
+      if (input.rewardDescription !== undefined) updateData.rewardDescription = input.rewardDescription?.trim()
+      if (input.termsAndConditions !== undefined) updateData.termsAndConditions = input.termsAndConditions?.trim()
+      if (input.expirationDays !== undefined) updateData.expirationDays = input.expirationDays
 
       await tx.loyaltyProgram.update({
         where: { id: programId },
         data: updateData
       })
 
-      // Update reward definition if needed
-      if (input.rewardName || input.rewardDescription !== undefined || input.pointsRequired) {
+      // Update reward definition if needed (backward compatibility)
+      if (input.reward || input.rewardDescription !== undefined || input.pointsRequired) {
         const reward = program.rewardDefinitions[0]
         if (reward) {
           const rewardUpdateData: any = {}
-          if (input.rewardName) rewardUpdateData.name = input.rewardName.trim()
+          if (input.reward) rewardUpdateData.name = input.reward.trim()
           if (input.rewardDescription !== undefined) rewardUpdateData.description = input.rewardDescription?.trim()
           if (input.pointsRequired) rewardUpdateData.pointsRequired = input.pointsRequired
 

@@ -54,7 +54,8 @@ describe('Business', () => {
           businessId: business.id,
           name: 'Program 1',
           status: LoyaltyProgramStatus.ACTIVE,
-          pointsRequired: 10
+          pointsRequired: 10,
+        reward: 'Test reward'
         }
       })
 
@@ -88,7 +89,8 @@ describe('Business', () => {
           businessId: business.id,
           name: 'Active Program',
           status: LoyaltyProgramStatus.ACTIVE,
-          pointsRequired: 10
+          pointsRequired: 10,
+        reward: 'Test reward'
         }
       })
 
@@ -98,7 +100,8 @@ describe('Business', () => {
           businessId: business.id,
           name: 'Draft Program',
           status: LoyaltyProgramStatus.DRAFT,
-          pointsRequired: 15
+          pointsRequired: 15,
+        reward: 'Test reward'
         }
       })
 

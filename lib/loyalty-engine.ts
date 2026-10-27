@@ -1,5 +1,5 @@
 import { prisma } from './prisma'
-import { EarnedRewardStatus, TransactionType, LoyaltyProgramStatus } from '@prisma/client'
+import { EarnedRewardStatus, TransactionType, LoyaltyProgramStatus, ProgramType } from '@prisma/client'
 import { canPerformLoyaltyOperations } from './billing-enforcement'
 import { syncMembershipToWallet } from './wallet/google-wallet'
 import { syncMembershipToAppleWallet } from './wallet/apple-wallet'
@@ -42,16 +42,48 @@ export async function registerPurchase(membershipId: string, businessId: string,
   const goal = program.pointsRequired
   const currentPoints = membership.currentPoints
 
+  // Determine transaction type and description based on program type
+  const getTransactionTypeAndDescription = (programType: ProgramType) => {
+    switch (programType) {
+      case ProgramType.VISITS:
+        return {
+          type: TransactionType.VISIT,
+          description: 'Visita registrada'
+        }
+      case ProgramType.PURCHASES:
+        return {
+          type: TransactionType.PURCHASE,
+          description: 'Compra registrada'
+        }
+      case ProgramType.STREAK:
+        // For now, STREAK uses VISIT type - streak logic to be implemented
+        return {
+          type: TransactionType.VISIT,
+          description: 'Visita consecutiva registrada'
+        }
+      case ProgramType.POINTS:
+        // POINTS not yet implemented
+        throw new Error('Programa de puntos no disponible aún')
+      default:
+        return {
+          type: TransactionType.PURCHASE,
+          description: 'Actividad registrada'
+        }
+    }
+  }
+
+  const { type, description } = getTransactionTypeAndDescription(program.programType)
+
   // Create transaction and update membership atomically
   const result = await prisma.$transaction(async (tx) => {
     // Create transaction
     const transaction = await tx.transaction.create({
       data: {
         membershipId,
-        type: TransactionType.PURCHASE,
+        type,
         points: 1,
         amount: amount ?? null,
-        description: 'Compra registrada'
+        description
       }
     })
 

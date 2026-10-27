@@ -126,7 +126,7 @@ describe('Loyalty Program Lifecycle', () => {
         name: 'Test Program',
         publicDescription: 'Test description',
         pointsRequired: 5,
-        rewardName: 'Test Reward'
+        reward: 'Test Reward'
       })
 
       expect(result.success).toBe(true)
@@ -144,7 +144,7 @@ describe('Loyalty Program Lifecycle', () => {
         name: 'Active Program',
         publicDescription: 'Active description',
         pointsRequired: 5,
-        rewardName: 'Active Reward',
+        reward: 'Active Reward',
         status: LoyaltyProgramStatus.ACTIVE
       })
 
@@ -163,7 +163,7 @@ describe('Loyalty Program Lifecycle', () => {
         name: 'First Active',
         publicDescription: 'First',
         pointsRequired: 5,
-        rewardName: 'First Reward',
+        reward: 'First Reward',
         status: LoyaltyProgramStatus.ACTIVE
       })
 
@@ -172,7 +172,7 @@ describe('Loyalty Program Lifecycle', () => {
         name: 'Second Active',
         publicDescription: 'Second',
         pointsRequired: 5,
-        rewardName: 'Second Reward',
+        reward: 'Second Reward',
         status: LoyaltyProgramStatus.ACTIVE
       })
 
@@ -186,7 +186,7 @@ describe('Loyalty Program Lifecycle', () => {
         name: 'Active Program',
         publicDescription: 'Active',
         pointsRequired: 5,
-        rewardName: 'Active Reward',
+        reward: 'Active Reward',
         status: LoyaltyProgramStatus.ACTIVE
       })
 
@@ -195,7 +195,7 @@ describe('Loyalty Program Lifecycle', () => {
         name: 'Paused Program',
         publicDescription: 'Paused',
         pointsRequired: 5,
-        rewardName: 'Paused Reward',
+        reward: 'Paused Reward',
         status: LoyaltyProgramStatus.PAUSED
       })
 
@@ -209,7 +209,7 @@ describe('Loyalty Program Lifecycle', () => {
         name: 'Test Program',
         publicDescription: 'Test',
         pointsRequired: 5,
-        rewardName: 'Test Reward',
+        reward: 'Test Reward',
         status: LoyaltyProgramStatus.ACTIVE
       })
 
@@ -232,7 +232,7 @@ describe('Loyalty Program Lifecycle', () => {
         name: 'Test Program',
         publicDescription: 'Test',
         pointsRequired: 5,
-        rewardName: 'Test Reward',
+        reward: 'Test Reward',
         status: LoyaltyProgramStatus.PAUSED
       })
 
@@ -255,7 +255,7 @@ describe('Loyalty Program Lifecycle', () => {
         name: 'Test Program',
         publicDescription: 'Test',
         pointsRequired: 5,
-        rewardName: 'Test Reward',
+        reward: 'Test Reward',
         status: LoyaltyProgramStatus.ACTIVE
       })
 
@@ -278,7 +278,7 @@ describe('Loyalty Program Lifecycle', () => {
         name: 'Test Program',
         publicDescription: 'Test',
         pointsRequired: 5,
-        rewardName: 'Test Reward',
+        reward: 'Test Reward',
         status: LoyaltyProgramStatus.PAUSED
       })
 
@@ -295,7 +295,7 @@ describe('Loyalty Program Lifecycle', () => {
         name: 'Test Program',
         publicDescription: 'Test',
         pointsRequired: 5,
-        rewardName: 'Test Reward',
+        reward: 'Test Reward',
         status: LoyaltyProgramStatus.ACTIVE
       })
 
@@ -318,7 +318,7 @@ describe('Loyalty Program Lifecycle', () => {
         name: 'Test Program',
         publicDescription: 'Test',
         pointsRequired: 5,
-        rewardName: 'Test Reward',
+        reward: 'Test Reward',
         status: LoyaltyProgramStatus.ACTIVE
       })
 
@@ -342,7 +342,7 @@ describe('Loyalty Program Lifecycle', () => {
         name: 'First Program',
         publicDescription: 'First',
         pointsRequired: 5,
-        rewardName: 'First Reward',
+        reward: 'First Reward',
         status: LoyaltyProgramStatus.ACTIVE
       })
 
@@ -351,7 +351,7 @@ describe('Loyalty Program Lifecycle', () => {
         name: 'Second Program',
         publicDescription: 'Second',
         pointsRequired: 5,
-        rewardName: 'Second Reward',
+        reward: 'Second Reward',
         status: LoyaltyProgramStatus.PAUSED
       })
 
@@ -371,7 +371,7 @@ describe('Loyalty Program Lifecycle', () => {
         name: 'First Program',
         publicDescription: 'First',
         pointsRequired: 5,
-        rewardName: 'First Reward',
+        reward: 'First Reward',
         status: LoyaltyProgramStatus.ACTIVE
       })
 
@@ -380,7 +380,7 @@ describe('Loyalty Program Lifecycle', () => {
         name: 'Second Program',
         publicDescription: 'Second',
         pointsRequired: 5,
-        rewardName: 'Second Reward',
+        reward: 'Second Reward',
         status: LoyaltyProgramStatus.PAUSED
       })
 
@@ -403,7 +403,7 @@ describe('Loyalty Program Lifecycle', () => {
         name: 'Original Name',
         publicDescription: 'Original description',
         pointsRequired: 5,
-        rewardName: 'Original Reward',
+        reward: 'Original Reward',
         status: LoyaltyProgramStatus.ACTIVE
       })
 
@@ -427,7 +427,7 @@ describe('Loyalty Program Lifecycle', () => {
         name: 'Original Name',
         publicDescription: 'Original description',
         pointsRequired: 5,
-        rewardName: 'Original Reward',
+        reward: 'Original Reward',
         status: LoyaltyProgramStatus.PAUSED
       })
 
@@ -443,7 +443,7 @@ describe('Loyalty Program Lifecycle', () => {
         name: 'Original Name',
         publicDescription: 'Original description',
         pointsRequired: 5,
-        rewardName: 'Original Reward',
+        reward: 'Original Reward',
         status: LoyaltyProgramStatus.ACTIVE
       })
 
@@ -467,7 +467,7 @@ describe('Loyalty Program Lifecycle', () => {
         name: 'Test Program',
         publicDescription: 'Test',
         pointsRequired: 5,
-        rewardName: 'Test Reward'
+        reward: 'Test Reward'
       })
 
       const result = await deleteLoyaltyProgram(createResult.programId!)
@@ -486,7 +486,7 @@ describe('Loyalty Program Lifecycle', () => {
         name: 'Test Program',
         publicDescription: 'Test',
         pointsRequired: 5,
-        rewardName: 'Test Reward',
+        reward: 'Test Reward',
         status: LoyaltyProgramStatus.ACTIVE
       })
 
@@ -517,7 +517,7 @@ describe('Loyalty Program Lifecycle', () => {
         name: 'Test Program',
         publicDescription: 'Test',
         pointsRequired: 5,
-        rewardName: 'Test Reward',
+        reward: 'Test Reward',
         status: LoyaltyProgramStatus.ACTIVE
       })
 
@@ -560,7 +560,7 @@ describe('Loyalty Program Lifecycle', () => {
         name: 'Test Program',
         publicDescription: 'Test description',
         pointsRequired: 5,
-        rewardName: 'Test Reward',
+        reward: 'Test Reward',
         status: LoyaltyProgramStatus.ACTIVE
       })
 
@@ -578,7 +578,7 @@ describe('Loyalty Program Lifecycle', () => {
         name: 'Paused Program',
         publicDescription: 'Paused',
         pointsRequired: 5,
-        rewardName: 'Paused Reward',
+        reward: 'Paused Reward',
         status: LoyaltyProgramStatus.PAUSED
       })
 
@@ -595,7 +595,7 @@ describe('Loyalty Program Lifecycle', () => {
         name: 'Test Program',
         publicDescription: 'Test',
         pointsRequired: 5,
-        rewardName: 'Test Reward',
+        reward: 'Test Reward',
         status: LoyaltyProgramStatus.ACTIVE
       })
 
@@ -701,7 +701,7 @@ describe('Loyalty Program Lifecycle', () => {
         name: 'Test Program',
         publicDescription: 'Test',
         pointsRequired: 5,
-        rewardName: 'Test Reward',
+        reward: 'Test Reward',
         status: LoyaltyProgramStatus.ACTIVE
       })
 
@@ -744,7 +744,7 @@ describe('Loyalty Program Lifecycle', () => {
         name: 'Test Program',
         publicDescription: 'Test',
         pointsRequired: 5,
-        rewardName: 'Test Reward',
+        reward: 'Test Reward',
         status: LoyaltyProgramStatus.ACTIVE
       })
 
@@ -794,7 +794,7 @@ describe('Loyalty Program Lifecycle', () => {
         name: 'First Program',
         publicDescription: 'First',
         pointsRequired: 5,
-        rewardName: 'First Reward',
+        reward: 'First Reward',
         status: LoyaltyProgramStatus.ACTIVE
       })
 
@@ -823,7 +823,7 @@ describe('Loyalty Program Lifecycle', () => {
         name: 'Second Program',
         publicDescription: 'Second',
         pointsRequired: 10,
-        rewardName: 'Second Reward',
+        reward: 'Second Reward',
         status: LoyaltyProgramStatus.ACTIVE
       })
 

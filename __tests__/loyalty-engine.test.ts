@@ -31,7 +31,8 @@ describe('Loyalty Engine', () => {
         businessId,
         name: 'Test Program',
         status: LoyaltyProgramStatus.ACTIVE,
-        pointsRequired: 3
+        pointsRequired: 3,
+        reward: 'Test reward'
       }
     })
     programId = program.id

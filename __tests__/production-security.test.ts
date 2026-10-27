@@ -96,7 +96,8 @@ describe('Production Security', () => {
           businessId: business.id,
           name: 'Token Test Program 1',
           status: 'ACTIVE',
-          pointsRequired: 10
+          pointsRequired: 10,
+        reward: 'Test reward'
         }
       })
 
@@ -105,7 +106,8 @@ describe('Production Security', () => {
           businessId: business.id,
           name: 'Token Test Program 2',
           status: 'PAUSED', // Use PAUSED to avoid unique ACTIVE constraint
-          pointsRequired: 10
+          pointsRequired: 10,
+        reward: 'Test reward'
         }
       })
 

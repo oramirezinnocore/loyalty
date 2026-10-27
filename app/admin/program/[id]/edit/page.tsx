@@ -1,10 +1,12 @@
 import { redirect } from 'next/navigation'
 import { getSession, getUserBusinesses } from '@/lib/authorization'
 import { prisma } from '@/lib/prisma'
-import Link from 'next/link'
-import { EditProgramForm } from './edit-program-form'
+import { ProgramBuilder } from '../../components/program-builder'
+import { Metadata } from 'next'
 
-export const instant = false
+export const metadata: Metadata = {
+  title: 'Editar Programa | IntusPath Loyalty'
+}
 
 interface PageProps {
   params: Promise<{ id: string }>
@@ -25,18 +27,13 @@ export default async function EditProgramPage({ params }: PageProps) {
   }
 
   const { id } = await params
-  const businessId = businesses[0].id
+  const business = businesses[0]
 
   // Fetch program with tenant isolation
   const program = await prisma.loyaltyProgram.findFirst({
     where: {
       id,
-      businessId // Tenant isolation: only fetch if owned by this business
-    },
-    include: {
-      rewardDefinitions: {
-        where: { isActive: true }
-      }
+      businessId: business.id // Tenant isolation: only fetch if owned by this business
     }
   })
 
@@ -49,32 +46,24 @@ export default async function EditProgramPage({ params }: PageProps) {
     redirect('/admin/program')
   }
 
-  const reward = program.rewardDefinitions[0]
-
   return (
-    <div className="min-h-screen bg-gray-50">
-      <div className="bg-white border-b">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
-          <Link href="/admin/program" className="text-blue-600 hover:underline mb-2 inline-block">
-            ← Volver al programa
-          </Link>
-          <h1 className="text-2xl font-bold">Editar programa</h1>
-        </div>
-      </div>
-
-      <div className="max-w-2xl mx-auto px-4 py-6">
-        <EditProgramForm
-          program={{
-            id: program.id,
-            name: program.name,
-            description: program.description || '',
-            publicDescription: program.publicDescription || '',
-            pointsRequired: program.pointsRequired,
-            rewardName: reward?.name || '',
-            rewardDescription: reward?.description || ''
-          }}
-        />
-      </div>
-    </div>
+    <ProgramBuilder
+      mode="edit"
+      program={{
+        id: program.id,
+        name: program.name,
+        description: program.description,
+        publicDescription: program.publicDescription,
+        programType: program.programType,
+        pointsRequired: program.pointsRequired,
+        reward: program.reward,
+        rewardDescription: program.rewardDescription,
+        termsAndConditions: program.termsAndConditions,
+        expirationDays: program.expirationDays,
+        status: program.status
+      }}
+      businessName={business.name}
+      businessLogoUrl={business.logoUrl}
+    />
   )
 }
