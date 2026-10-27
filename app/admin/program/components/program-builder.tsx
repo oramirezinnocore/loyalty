@@ -22,7 +22,7 @@ interface ProgramBuilderProps {
     publicDescription: string | null
     programType: ProgramType
     pointsRequired: number
-    reward: string
+    rewardName: string
     rewardDescription: string | null
     termsAndConditions: string | null
     expirationDays: number | null
@@ -40,7 +40,7 @@ export function ProgramBuilder({ mode, program, businessName, businessLogoUrl }:
   const [formData, setFormData] = useState({
     programType: program?.programType || ProgramType.VISITS,
     goal: program?.pointsRequired || 5,
-    reward: program?.reward || '',
+    rewardName: program?.rewardName || '',
     rewardDescription: program?.rewardDescription || '',
     name: program?.name || '',
     publicDescription: program?.publicDescription || '',
@@ -53,16 +53,16 @@ export function ProgramBuilder({ mode, program, businessName, businessLogoUrl }:
 
   // Auto-generate public description if not manually edited
   useEffect(() => {
-    if (!manuallyEditedDescription && formData.goal && formData.reward) {
+    if (!manuallyEditedDescription && formData.goal && formData.rewardName) {
       const typeLabel =
         formData.programType === ProgramType.VISITS ? 'visitas' :
         formData.programType === ProgramType.PURCHASES ? 'compras' :
         formData.programType === ProgramType.STREAK ? 'días consecutivos' : 'puntos'
 
-      const autoDescription = `Completa ${formData.goal} ${typeLabel} y recibe ${formData.reward}`
+      const autoDescription = `Completa ${formData.goal} ${typeLabel} y recibe ${formData.rewardName}`
       setFormData(prev => ({ ...prev, publicDescription: autoDescription }))
     }
-  }, [formData.programType, formData.goal, formData.reward, manuallyEditedDescription])
+  }, [formData.programType, formData.goal, formData.rewardName, manuallyEditedDescription])
 
   const handlePublicDescriptionChange = (value: string) => {
     setManuallyEditedDescription(true)
@@ -79,7 +79,7 @@ export function ProgramBuilder({ mode, program, businessName, businessLogoUrl }:
       publicDescription: formData.publicDescription,
       programType: formData.programType,
       pointsRequired: formData.goal,
-      reward: formData.reward,
+      rewardName: formData.rewardName,
       rewardDescription: formData.rewardDescription || undefined,
       termsAndConditions: formData.termsAndConditions || undefined,
       expirationDays: formData.expirationDays,
@@ -142,11 +142,11 @@ export function ProgramBuilder({ mode, program, businessName, businessLogoUrl }:
 
               {/* Step 3: Reward */}
               <RewardDefinition
-                reward={formData.reward}
+                rewardName={formData.rewardName}
                 rewardDescription={formData.rewardDescription}
-                onRewardChange={(reward) => setFormData(prev => ({ ...prev, reward }))}
+                onRewardChange={(rewardName) => setFormData(prev => ({ ...prev, rewardName }))}
                 onDescriptionChange={(desc) => setFormData(prev => ({ ...prev, rewardDescription: desc }))}
-                rewardError={errors.reward}
+                rewardError={errors.rewardName}
               />
 
               {/* Step 4: Program Information */}
@@ -199,7 +199,7 @@ export function ProgramBuilder({ mode, program, businessName, businessLogoUrl }:
                   programType={formData.programType}
                   goal={formData.goal}
                   currentProgress={0}
-                  reward={formData.reward}
+                  rewardName={formData.rewardName}
                   rewardDescription={formData.rewardDescription}
                   programName={formData.name || 'Programa de lealtad'}
                   publicDescription={formData.publicDescription}

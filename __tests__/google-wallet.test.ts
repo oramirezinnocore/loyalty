@@ -44,8 +44,7 @@ describe('Google Wallet Integration', () => {
         name: 'Wallet Test Program',
         publicDescription: 'Test program for wallet',
         status: LoyaltyProgramStatus.ACTIVE,
-        pointsRequired: 5,
-        reward: 'Test reward'
+        pointsRequired: 5
       }
     })
     programId = program.id

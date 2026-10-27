@@ -87,8 +87,6 @@ async function main() {
       publicDescription: 'En la compra de 9 churros, el décimo va por nuestra cuenta.',
       status: LoyaltyProgramStatus.ACTIVE,
       pointsRequired: 9,
-      reward: 'Churro gratis',
-      rewardDescription: 'Un churro gratis de cualquier sabor',
       rewardDefinitions: {
         create: {
           name: 'Churro gratis',

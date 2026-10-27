@@ -11,7 +11,7 @@ interface CreateProgramInput {
   publicDescription?: string
   programType: ProgramType
   pointsRequired: number
-  reward: string
+  rewardName: string
   rewardDescription?: string
   termsAndConditions?: string
   expirationDays?: number
@@ -69,16 +69,21 @@ export async function createLoyaltyProgram(
       fieldErrors.programType = 'El tipo de programa es requerido'
     }
 
+    // Block POINTS type - not yet implemented
+    if (input.programType === ProgramType.POINTS) {
+      fieldErrors.programType = 'Los programas de puntos no están disponibles aún'
+    }
+
     if (!input.pointsRequired || input.pointsRequired < 1) {
       fieldErrors.pointsRequired = 'La meta debe ser al menos 1'
     } else if (input.pointsRequired > 100) {
       fieldErrors.pointsRequired = 'La meta no puede exceder 100'
     }
 
-    if (!input.reward || input.reward.trim().length === 0) {
-      fieldErrors.reward = 'La recompensa es requerida'
-    } else if (input.reward.length > 200) {
-      fieldErrors.reward = 'La recompensa debe tener menos de 200 caracteres'
+    if (!input.rewardName || input.rewardName.trim().length === 0) {
+      fieldErrors.rewardName = 'El nombre de la recompensa es requerido'
+    } else if (input.rewardName.length > 200) {
+      fieldErrors.rewardName = 'El nombre de la recompensa debe tener menos de 200 caracteres'
     }
 
     if (input.expirationDays !== undefined && input.expirationDays < 1) {
@@ -122,19 +127,17 @@ export async function createLoyaltyProgram(
           publicDescription: input.publicDescription?.trim(),
           programType: input.programType,
           pointsRequired: input.pointsRequired,
-          reward: input.reward.trim(),
-          rewardDescription: input.rewardDescription?.trim(),
           termsAndConditions: input.termsAndConditions?.trim(),
           expirationDays: input.expirationDays,
           status: input.status || LoyaltyProgramStatus.DRAFT
         }
       })
 
-      // Create reward definition (backward compatibility with existing system)
+      // Create reward definition (single source of truth)
       await tx.rewardDefinition.create({
         data: {
           loyaltyProgramId: program.id,
-          name: input.reward.trim(),
+          name: input.rewardName.trim(),
           description: input.rewardDescription?.trim(),
           pointsRequired: input.pointsRequired,
           isActive: true
@@ -357,6 +360,11 @@ export async function updateLoyaltyProgram(
       }
     }
 
+    // Block POINTS type - not yet implemented
+    if (input.programType === ProgramType.POINTS) {
+      fieldErrors.programType = 'Los programas de puntos no están disponibles aún'
+    }
+
     if (input.pointsRequired !== undefined) {
       if (!input.pointsRequired || input.pointsRequired < 1) {
         fieldErrors.pointsRequired = 'La meta debe ser al menos 1'
@@ -365,11 +373,11 @@ export async function updateLoyaltyProgram(
       }
     }
 
-    if (input.reward !== undefined) {
-      if (!input.reward || input.reward.trim().length === 0) {
-        fieldErrors.reward = 'La recompensa es requerida'
-      } else if (input.reward.length > 200) {
-        fieldErrors.reward = 'La recompensa debe tener menos de 200 caracteres'
+    if (input.rewardName !== undefined) {
+      if (!input.rewardName || input.rewardName.trim().length === 0) {
+        fieldErrors.rewardName = 'El nombre de la recompensa es requerido'
+      } else if (input.rewardName.length > 200) {
+        fieldErrors.rewardName = 'El nombre de la recompensa debe tener menos de 200 caracteres'
       }
     }
 
@@ -393,8 +401,6 @@ export async function updateLoyaltyProgram(
       if (input.publicDescription !== undefined) updateData.publicDescription = input.publicDescription?.trim()
       if (input.programType) updateData.programType = input.programType
       if (input.pointsRequired) updateData.pointsRequired = input.pointsRequired
-      if (input.reward) updateData.reward = input.reward.trim()
-      if (input.rewardDescription !== undefined) updateData.rewardDescription = input.rewardDescription?.trim()
       if (input.termsAndConditions !== undefined) updateData.termsAndConditions = input.termsAndConditions?.trim()
       if (input.expirationDays !== undefined) updateData.expirationDays = input.expirationDays
 
@@ -403,12 +409,12 @@ export async function updateLoyaltyProgram(
         data: updateData
       })
 
-      // Update reward definition if needed (backward compatibility)
-      if (input.reward || input.rewardDescription !== undefined || input.pointsRequired) {
+      // Update reward definition (single source of truth)
+      if (input.rewardName || input.rewardDescription !== undefined || input.pointsRequired) {
         const reward = program.rewardDefinitions[0]
         if (reward) {
           const rewardUpdateData: any = {}
-          if (input.reward) rewardUpdateData.name = input.reward.trim()
+          if (input.rewardName) rewardUpdateData.name = input.rewardName.trim()
           if (input.rewardDescription !== undefined) rewardUpdateData.description = input.rewardDescription?.trim()
           if (input.pointsRequired) rewardUpdateData.pointsRequired = input.pointsRequired
 

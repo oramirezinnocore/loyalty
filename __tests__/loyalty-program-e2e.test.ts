@@ -13,7 +13,7 @@
  */
 
 import { describe, it, expect, beforeAll, afterAll } from '@jest/globals'
-import { PrismaClient, LoyaltyProgramStatus, EarnedRewardStatus } from '@prisma/client'
+import { PrismaClient, LoyaltyProgramStatus, EarnedRewardStatus, ProgramType } from '@prisma/client'
 import { createLoyaltyProgram, updateProgramStatus } from '@/app/actions/loyalty-program'
 import { registerPurchase, redeemReward } from '@/lib/loyalty-engine'
 import bcrypt from 'bcryptjs'
@@ -111,6 +111,7 @@ describe('Loyalty Program E2E', () => {
         name: 'Cliente Frecuente Test',
         description: 'Términos y condiciones',
         publicDescription: 'Completa 5 compras y recibe 1 churro gratis',
+        programType: ProgramType.PURCHASES,
         pointsRequired: 5,
         rewardName: '1 churro gratis',
         rewardDescription: 'Muestra este cupón al personal',
@@ -147,6 +148,7 @@ describe('Loyalty Program E2E', () => {
     it('should reject second ACTIVE program', async () => {
       const result = await createLoyaltyProgram({
         name: 'Second Program',
+        programType: ProgramType.VISITS,
         pointsRequired: 10,
         rewardName: 'Second Reward',
         status: LoyaltyProgramStatus.ACTIVE
@@ -159,6 +161,7 @@ describe('Loyalty Program E2E', () => {
     it('should validate required fields', async () => {
       const result = await createLoyaltyProgram({
         name: '',
+        programType: ProgramType.VISITS,
         pointsRequired: 0,
         rewardName: ''
       })
@@ -173,6 +176,7 @@ describe('Loyalty Program E2E', () => {
       // Too low
       const result1 = await createLoyaltyProgram({
         name: 'Test',
+        programType: ProgramType.VISITS,
         pointsRequired: 0,
         rewardName: 'Reward'
       })
@@ -182,6 +186,7 @@ describe('Loyalty Program E2E', () => {
       // Too high
       const result2 = await createLoyaltyProgram({
         name: 'Test',
+        programType: ProgramType.VISITS,
         pointsRequired: 101,
         rewardName: 'Reward'
       })

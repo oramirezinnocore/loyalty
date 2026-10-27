@@ -1,15 +1,15 @@
 'use client'
 
 interface RewardDefinitionProps {
-  reward: string
+  rewardName: string
   rewardDescription: string
-  onRewardChange: (reward: string) => void
+  onRewardChange: (rewardName: string) => void
   onDescriptionChange: (description: string) => void
   rewardError?: string
 }
 
 export function RewardDefinition({
-  reward,
+  rewardName,
   rewardDescription,
   onRewardChange,
   onDescriptionChange,
@@ -34,7 +34,7 @@ export function RewardDefinition({
         </label>
         <input
           type="text"
-          value={reward}
+          value={rewardName}
           onChange={(e) => onRewardChange(e.target.value)}
           placeholder="Ej: 1 churro gratis"
           className="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"

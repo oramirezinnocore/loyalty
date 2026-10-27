@@ -31,8 +31,7 @@ describe('Cross-Tenant Security', () => {
         businessId: businessA.id,
         name: 'Program A',
         status: LoyaltyProgramStatus.ACTIVE,
-        pointsRequired: 2,
-        reward: 'Test reward'
+        pointsRequired: 2
       }
     })
 
@@ -81,8 +80,7 @@ describe('Cross-Tenant Security', () => {
         businessId: businessB.id,
         name: 'Program B',
         status: LoyaltyProgramStatus.ACTIVE,
-        pointsRequired: 2,
-        reward: 'Test reward'
+        pointsRequired: 2
       }
     })
 

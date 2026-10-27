@@ -159,15 +159,11 @@ model LoyaltyProgram {
   publicDescription String?
   status          LoyaltyProgramStatus @default(DRAFT)
 
-  // Program type and configuration
+  // Program type (semantic/UI field)
   programType     ProgramType          @default(VISITS)
   pointsRequired  Int                  @default(0) // Goal for completion
 
-  // Simplified reward fields (UI-friendly)
-  reward          String               // e.g., "1 churro gratis"
-  rewardDescription String?            // e.g., "Muestra este cupón al personal"
-
-  // Additional rules
+  // Additional program-level rules
   termsAndConditions String?
   expirationDays  Int?                 // Days until membership expires
 
@@ -175,7 +171,7 @@ model LoyaltyProgram {
   updatedAt       DateTime             @updatedAt
 
   business        Business             @relation(fields: [businessId], references: [id], onDelete: Cascade)
-  rewardDefinitions RewardDefinition[]
+  rewardDefinitions RewardDefinition[] // Single source of truth for rewards
   memberships     Membership[]
 
   @@index([businessId])

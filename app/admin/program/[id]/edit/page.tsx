@@ -8,6 +8,8 @@ export const metadata: Metadata = {
   title: 'Editar Programa | IntusPath Loyalty'
 }
 
+export const instant = false
+
 interface PageProps {
   params: Promise<{ id: string }>
 }
@@ -34,6 +36,12 @@ export default async function EditProgramPage({ params }: PageProps) {
     where: {
       id,
       businessId: business.id // Tenant isolation: only fetch if owned by this business
+    },
+    include: {
+      rewardDefinitions: {
+        where: { isActive: true },
+        take: 1
+      }
     }
   })
 
@@ -46,6 +54,8 @@ export default async function EditProgramPage({ params }: PageProps) {
     redirect('/admin/program')
   }
 
+  const reward = program.rewardDefinitions[0]
+
   return (
     <ProgramBuilder
       mode="edit"
@@ -56,8 +66,8 @@ export default async function EditProgramPage({ params }: PageProps) {
         publicDescription: program.publicDescription,
         programType: program.programType,
         pointsRequired: program.pointsRequired,
-        reward: program.reward,
-        rewardDescription: program.rewardDescription,
+        rewardName: reward?.name || '',
+        rewardDescription: reward?.description || null,
         termsAndConditions: program.termsAndConditions,
         expirationDays: program.expirationDays,
         status: program.status

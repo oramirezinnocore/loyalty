@@ -8,7 +8,7 @@ interface CustomerPreviewProps {
   programType: ProgramType
   goal: number
   currentProgress: number
-  reward: string
+  rewardName: string
   rewardDescription: string
   programName: string
   publicDescription: string
@@ -20,7 +20,7 @@ export function CustomerPreview({
   programType,
   goal,
   currentProgress,
-  reward,
+  rewardName,
   rewardDescription,
   programName,
   publicDescription,
@@ -133,13 +133,13 @@ export function CustomerPreview({
             </div>
 
             {/* Reward */}
-            {reward && (
+            {rewardName && (
               <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
                 <p className="text-xs font-medium text-yellow-900 uppercase mb-1">
                   Tu recompensa
                 </p>
                 <p className="font-semibold text-yellow-900 mb-1">
-                  {reward}
+                  {rewardName}
                 </p>
                 {rewardDescription && (
                   <p className="text-sm text-yellow-800">

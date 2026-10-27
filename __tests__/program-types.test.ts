@@ -83,9 +83,15 @@ describe('Program Types', () => {
         publicDescription: 'Completa 5 visitas y recibe un regalo',
         programType: ProgramType.VISITS,
         pointsRequired: 5,
-        reward: '1 café gratis',
-        rewardDescription: 'Válido en tienda física',
-        status: LoyaltyProgramStatus.DRAFT
+        status: LoyaltyProgramStatus.DRAFT,
+        rewardDefinitions: {
+          create: {
+            name: '1 café gratis',
+            description: 'Válido en tienda física',
+            pointsRequired: 5,
+            isActive: true
+          }
+        }
       },
       include: {
         rewardDefinitions: true
@@ -94,7 +100,7 @@ describe('Program Types', () => {
 
     expect(program.programType).toBe(ProgramType.VISITS)
     expect(program.pointsRequired).toBe(5)
-    expect(program.reward).toBe('1 café gratis')
+    expect(program.rewardDefinitions[0].name).toBe('1 café gratis')
     expect(program.status).toBe(LoyaltyProgramStatus.DRAFT)
 
     // Cleanup
@@ -109,15 +115,24 @@ describe('Program Types', () => {
         publicDescription: 'Completa 10 compras y recibe un descuento',
         programType: ProgramType.PURCHASES,
         pointsRequired: 10,
-        reward: '20% de descuento',
-        rewardDescription: 'Aplicable en tu próxima compra',
-        status: LoyaltyProgramStatus.DRAFT
+        status: LoyaltyProgramStatus.DRAFT,
+        rewardDefinitions: {
+          create: {
+            name: '20% de descuento',
+            description: 'Aplicable en tu próxima compra',
+            pointsRequired: 10,
+            isActive: true
+          }
+        }
+      },
+      include: {
+        rewardDefinitions: true
       }
     })
 
     expect(program.programType).toBe(ProgramType.PURCHASES)
     expect(program.pointsRequired).toBe(10)
-    expect(program.reward).toBe('20% de descuento')
+    expect(program.rewardDefinitions[0].name).toBe('20% de descuento')
 
     // Cleanup
     await prisma.loyaltyProgram.delete({ where: { id: program.id } })
@@ -131,9 +146,15 @@ describe('Program Types', () => {
         publicDescription: 'Visítanos 7 días consecutivos y gana',
         programType: ProgramType.STREAK,
         pointsRequired: 7,
-        reward: 'Sorpresa especial',
-        rewardDescription: 'Un regalo por tu dedicación',
-        status: LoyaltyProgramStatus.DRAFT
+        status: LoyaltyProgramStatus.DRAFT,
+        rewardDefinitions: {
+          create: {
+            name: 'Regalo especial',
+            description: 'Un regalo por tu dedicación',
+            pointsRequired: 7,
+            isActive: true
+          }
+        }
       }
     })
 
@@ -144,21 +165,22 @@ describe('Program Types', () => {
     await prisma.loyaltyProgram.delete({ where: { id: program.id } })
   })
 
-  it('validates programType is required', async () => {
-    await expect(
-      prisma.loyaltyProgram.create({
-        data: {
-          businessId: testBusinessId,
-          name: 'Test',
-          publicDescription: 'Test',
-          // @ts-expect-error Testing missing programType
-          programType: undefined,
-          pointsRequired: 5,
-          reward: 'Test reward',
-          status: LoyaltyProgramStatus.DRAFT
-        }
-      })
-    ).rejects.toThrow()
+  it('validates programType defaults to VISITS', async () => {
+    const program = await prisma.loyaltyProgram.create({
+      data: {
+        businessId: testBusinessId,
+        name: 'Test Default Program',
+        publicDescription: 'Test',
+        pointsRequired: 5,
+        status: LoyaltyProgramStatus.DRAFT
+        // programType omitted - should default to VISITS
+      }
+    })
+
+    expect(program.programType).toBe(ProgramType.VISITS)
+
+    // Cleanup
+    await prisma.loyaltyProgram.delete({ where: { id: program.id } })
   })
 
   it('stores additional rules correctly', async () => {
@@ -169,7 +191,6 @@ describe('Program Types', () => {
         publicDescription: 'Programa con términos y vencimiento',
         programType: ProgramType.VISITS,
         pointsRequired: 5,
-        reward: 'Premio',
         termsAndConditions: 'Válido solo en tienda física. No acumulable.',
         expirationDays: 365,
         status: LoyaltyProgramStatus.DRAFT
@@ -194,7 +215,6 @@ describe('Program Types', () => {
         publicDescription: 'Test',
         // Not specifying programType - should default to VISITS
         pointsRequired: 5,
-        reward: 'Test',
         status: LoyaltyProgramStatus.DRAFT
       }
     })
@@ -213,7 +233,6 @@ describe('Program Types', () => {
         publicDescription: 'First',
         programType: ProgramType.VISITS,
         pointsRequired: 5,
-        reward: 'First reward',
         status: LoyaltyProgramStatus.ACTIVE
       }
     })
@@ -228,7 +247,6 @@ describe('Program Types', () => {
           publicDescription: 'Second',
           programType: ProgramType.PURCHASES,
           pointsRequired: 10,
-          reward: 'Second reward',
           status: LoyaltyProgramStatus.ACTIVE
         }
       })
@@ -246,7 +264,6 @@ describe('Program Types', () => {
         publicDescription: 'First draft',
         programType: ProgramType.VISITS,
         pointsRequired: 5,
-        reward: 'Reward 1',
         status: LoyaltyProgramStatus.DRAFT
       }
     })
@@ -258,7 +275,6 @@ describe('Program Types', () => {
         publicDescription: 'Second draft',
         programType: ProgramType.PURCHASES,
         pointsRequired: 10,
-        reward: 'Reward 2',
         status: LoyaltyProgramStatus.DRAFT
       }
     })

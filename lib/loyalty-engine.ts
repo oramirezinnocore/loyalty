@@ -74,6 +74,35 @@ export async function registerPurchase(membershipId: string, businessId: string,
 
   const { type, description } = getTransactionTypeAndDescription(program.programType)
 
+  // STREAK-specific logic: Check consecutive days
+  if (program.programType === ProgramType.STREAK) {
+    const lastActivity = membership.lastActivityAt
+    const now = new Date()
+
+    // Get date only (no time) for comparison
+    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate())
+
+    if (lastActivity) {
+      const lastDate = new Date(
+        lastActivity.getFullYear(),
+        lastActivity.getMonth(),
+        lastActivity.getDate()
+      )
+
+      // Same day - reject (only one visit per day)
+      if (today.getTime() === lastDate.getTime()) {
+        throw new Error('Ya registraste una visita hoy. Vuelve mañana para continuar tu racha.')
+      }
+
+      // Check if yesterday (consecutive)
+      const yesterday = new Date(today)
+      yesterday.setDate(yesterday.getDate() - 1)
+
+      // If NOT yesterday, streak is broken - will reset to 1 in transaction
+      // This is handled by resetting currentPoints below
+    }
+  }
+
   // Create transaction and update membership atomically
   const result = await prisma.$transaction(async (tx) => {
     // Create transaction
@@ -87,7 +116,40 @@ export async function registerPurchase(membershipId: string, businessId: string,
       }
     })
 
-    const newPoints = currentPoints + 1
+    let newPoints: number
+
+    // STREAK: Calculate based on consecutive days
+    if (program.programType === ProgramType.STREAK) {
+      const lastActivity = membership.lastActivityAt
+      const now = new Date()
+      const today = new Date(now.getFullYear(), now.getMonth(), now.getDate())
+
+      if (!lastActivity) {
+        // First visit
+        newPoints = 1
+      } else {
+        const lastDate = new Date(
+          lastActivity.getFullYear(),
+          lastActivity.getMonth(),
+          lastActivity.getDate()
+        )
+
+        const yesterday = new Date(today)
+        yesterday.setDate(yesterday.getDate() - 1)
+
+        if (lastDate.getTime() === yesterday.getTime()) {
+          // Consecutive day - increment streak
+          newPoints = currentPoints + 1
+        } else {
+          // Streak broken - reset to 1
+          newPoints = 1
+        }
+      }
+    } else {
+      // VISITS/PURCHASES: Simple accumulation
+      newPoints = currentPoints + 1
+    }
+
     const reachedGoal = newPoints >= goal
 
     // Update membership

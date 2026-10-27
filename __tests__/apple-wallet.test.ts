@@ -43,8 +43,7 @@ describe('Apple Wallet Integration', () => {
         name: 'Apple Wallet Test Program',
         publicDescription: 'Test program for Apple Wallet',
         status: LoyaltyProgramStatus.ACTIVE,
-        pointsRequired: 8,
-        reward: 'Test reward'
+        pointsRequired: 8
       }
     })
     programId = program.id
@@ -272,8 +271,7 @@ describe('Apple Wallet Integration', () => {
           businessId: business2.id,
           name: 'Program 2',
           status: LoyaltyProgramStatus.ACTIVE,
-          pointsRequired: 5,
-        reward: 'Test reward'
+          pointsRequired: 5
         }
       })
 

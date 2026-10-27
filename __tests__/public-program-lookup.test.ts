@@ -55,7 +55,7 @@ describe('Public Program Lookup', () => {
     })
     programId = program.id
 
-    // Create reward: 1 churro gratis
+    // Create rewardName: 1 churro gratis
     await prisma.rewardDefinition.create({
       data: {
         loyaltyProgramId: programId,

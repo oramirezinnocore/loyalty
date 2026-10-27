@@ -7,6 +7,8 @@ export const metadata: Metadata = {
   title: 'Crear Programa | IntusPath Loyalty'
 }
 
+export const instant = false
+
 export default async function NewProgramPage() {
   // Auth check
   const session = await getSession()

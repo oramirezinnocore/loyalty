@@ -542,8 +542,7 @@ describe('Business Onboarding', () => {
           name: 'Program A',
           description: 'Test',
           status: 'ACTIVE',
-          pointsRequired: 10,
-        reward: 'Test reward'
+          pointsRequired: 10
         }
       })
 

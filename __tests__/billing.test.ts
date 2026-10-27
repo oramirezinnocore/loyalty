@@ -152,8 +152,7 @@ describe('Billing and Subscription', () => {
           businessId: testBusinessId,
           name: 'Test Program',
           status: 'ACTIVE',
-          pointsRequired: 2,
-        reward: 'Test reward'
+          pointsRequired: 2
         }
       })
       programId = program.id

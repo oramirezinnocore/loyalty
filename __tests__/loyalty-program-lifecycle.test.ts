@@ -12,7 +12,7 @@
  */
 
 import { prisma } from '@/lib/prisma'
-import { LoyaltyProgramStatus } from '@prisma/client'
+import { LoyaltyProgramStatus, ProgramType } from '@prisma/client'
 import {
   createLoyaltyProgram,
   updateProgramStatus,
@@ -125,8 +125,9 @@ describe('Loyalty Program Lifecycle', () => {
       const result = await createLoyaltyProgram({
         name: 'Test Program',
         publicDescription: 'Test description',
+        programType: ProgramType.VISITS,
         pointsRequired: 5,
-        reward: 'Test Reward'
+        rewardName: 'Test Reward'
       })
 
       expect(result.success).toBe(true)
@@ -143,8 +144,9 @@ describe('Loyalty Program Lifecycle', () => {
       const result = await createLoyaltyProgram({
         name: 'Active Program',
         publicDescription: 'Active description',
+        programType: ProgramType.VISITS,
         pointsRequired: 5,
-        reward: 'Active Reward',
+        rewardName: 'Active Reward',
         status: LoyaltyProgramStatus.ACTIVE
       })
 
@@ -162,8 +164,9 @@ describe('Loyalty Program Lifecycle', () => {
       await createLoyaltyProgram({
         name: 'First Active',
         publicDescription: 'First',
+        programType: ProgramType.VISITS,
         pointsRequired: 5,
-        reward: 'First Reward',
+        rewardName: 'First Reward',
         status: LoyaltyProgramStatus.ACTIVE
       })
 
@@ -171,8 +174,9 @@ describe('Loyalty Program Lifecycle', () => {
       const result = await createLoyaltyProgram({
         name: 'Second Active',
         publicDescription: 'Second',
+        programType: ProgramType.VISITS,
         pointsRequired: 5,
-        reward: 'Second Reward',
+        rewardName: 'Second Reward',
         status: LoyaltyProgramStatus.ACTIVE
       })
 
@@ -185,8 +189,9 @@ describe('Loyalty Program Lifecycle', () => {
       await createLoyaltyProgram({
         name: 'Active Program',
         publicDescription: 'Active',
+        programType: ProgramType.VISITS,
         pointsRequired: 5,
-        reward: 'Active Reward',
+        rewardName: 'Active Reward',
         status: LoyaltyProgramStatus.ACTIVE
       })
 
@@ -194,8 +199,9 @@ describe('Loyalty Program Lifecycle', () => {
       const result = await createLoyaltyProgram({
         name: 'Paused Program',
         publicDescription: 'Paused',
+        programType: ProgramType.VISITS,
         pointsRequired: 5,
-        reward: 'Paused Reward',
+        rewardName: 'Paused Reward',
         status: LoyaltyProgramStatus.PAUSED
       })
 
@@ -208,8 +214,9 @@ describe('Loyalty Program Lifecycle', () => {
       const createResult = await createLoyaltyProgram({
         name: 'Test Program',
         publicDescription: 'Test',
+        programType: ProgramType.VISITS,
         pointsRequired: 5,
-        reward: 'Test Reward',
+        rewardName: 'Test Reward',
         status: LoyaltyProgramStatus.ACTIVE
       })
 
@@ -231,8 +238,9 @@ describe('Loyalty Program Lifecycle', () => {
       const createResult = await createLoyaltyProgram({
         name: 'Test Program',
         publicDescription: 'Test',
+        programType: ProgramType.VISITS,
         pointsRequired: 5,
-        reward: 'Test Reward',
+        rewardName: 'Test Reward',
         status: LoyaltyProgramStatus.PAUSED
       })
 
@@ -254,8 +262,9 @@ describe('Loyalty Program Lifecycle', () => {
       const createResult = await createLoyaltyProgram({
         name: 'Test Program',
         publicDescription: 'Test',
+        programType: ProgramType.VISITS,
         pointsRequired: 5,
-        reward: 'Test Reward',
+        rewardName: 'Test Reward',
         status: LoyaltyProgramStatus.ACTIVE
       })
 
@@ -277,8 +286,9 @@ describe('Loyalty Program Lifecycle', () => {
       const createResult = await createLoyaltyProgram({
         name: 'Test Program',
         publicDescription: 'Test',
+        programType: ProgramType.VISITS,
         pointsRequired: 5,
-        reward: 'Test Reward',
+        rewardName: 'Test Reward',
         status: LoyaltyProgramStatus.PAUSED
       })
 
@@ -294,8 +304,9 @@ describe('Loyalty Program Lifecycle', () => {
       const createResult = await createLoyaltyProgram({
         name: 'Test Program',
         publicDescription: 'Test',
+        programType: ProgramType.VISITS,
         pointsRequired: 5,
-        reward: 'Test Reward',
+        rewardName: 'Test Reward',
         status: LoyaltyProgramStatus.ACTIVE
       })
 
@@ -317,8 +328,9 @@ describe('Loyalty Program Lifecycle', () => {
       const createResult = await createLoyaltyProgram({
         name: 'Test Program',
         publicDescription: 'Test',
+        programType: ProgramType.VISITS,
         pointsRequired: 5,
-        reward: 'Test Reward',
+        rewardName: 'Test Reward',
         status: LoyaltyProgramStatus.ACTIVE
       })
 
@@ -341,8 +353,9 @@ describe('Loyalty Program Lifecycle', () => {
       const first = await createLoyaltyProgram({
         name: 'First Program',
         publicDescription: 'First',
+        programType: ProgramType.VISITS,
         pointsRequired: 5,
-        reward: 'First Reward',
+        rewardName: 'First Reward',
         status: LoyaltyProgramStatus.ACTIVE
       })
 
@@ -350,8 +363,9 @@ describe('Loyalty Program Lifecycle', () => {
       const second = await createLoyaltyProgram({
         name: 'Second Program',
         publicDescription: 'Second',
+        programType: ProgramType.VISITS,
         pointsRequired: 5,
-        reward: 'Second Reward',
+        rewardName: 'Second Reward',
         status: LoyaltyProgramStatus.PAUSED
       })
 
@@ -370,8 +384,9 @@ describe('Loyalty Program Lifecycle', () => {
       const first = await createLoyaltyProgram({
         name: 'First Program',
         publicDescription: 'First',
+        programType: ProgramType.VISITS,
         pointsRequired: 5,
-        reward: 'First Reward',
+        rewardName: 'First Reward',
         status: LoyaltyProgramStatus.ACTIVE
       })
 
@@ -379,8 +394,9 @@ describe('Loyalty Program Lifecycle', () => {
       const second = await createLoyaltyProgram({
         name: 'Second Program',
         publicDescription: 'Second',
+        programType: ProgramType.VISITS,
         pointsRequired: 5,
-        reward: 'Second Reward',
+        rewardName: 'Second Reward',
         status: LoyaltyProgramStatus.PAUSED
       })
 
@@ -402,8 +418,9 @@ describe('Loyalty Program Lifecycle', () => {
       const createResult = await createLoyaltyProgram({
         name: 'Original Name',
         publicDescription: 'Original description',
+        programType: ProgramType.VISITS,
         pointsRequired: 5,
-        reward: 'Original Reward',
+        rewardName: 'Original Reward',
         status: LoyaltyProgramStatus.ACTIVE
       })
 
@@ -426,8 +443,9 @@ describe('Loyalty Program Lifecycle', () => {
       const createResult = await createLoyaltyProgram({
         name: 'Original Name',
         publicDescription: 'Original description',
+        programType: ProgramType.VISITS,
         pointsRequired: 5,
-        reward: 'Original Reward',
+        rewardName: 'Original Reward',
         status: LoyaltyProgramStatus.PAUSED
       })
 
@@ -442,8 +460,9 @@ describe('Loyalty Program Lifecycle', () => {
       const createResult = await createLoyaltyProgram({
         name: 'Original Name',
         publicDescription: 'Original description',
+        programType: ProgramType.VISITS,
         pointsRequired: 5,
-        reward: 'Original Reward',
+        rewardName: 'Original Reward',
         status: LoyaltyProgramStatus.ACTIVE
       })
 
@@ -466,8 +485,9 @@ describe('Loyalty Program Lifecycle', () => {
       const createResult = await createLoyaltyProgram({
         name: 'Test Program',
         publicDescription: 'Test',
+        programType: ProgramType.VISITS,
         pointsRequired: 5,
-        reward: 'Test Reward'
+        rewardName: 'Test Reward'
       })
 
       const result = await deleteLoyaltyProgram(createResult.programId!)
@@ -485,8 +505,9 @@ describe('Loyalty Program Lifecycle', () => {
       const createResult = await createLoyaltyProgram({
         name: 'Test Program',
         publicDescription: 'Test',
+        programType: ProgramType.VISITS,
         pointsRequired: 5,
-        reward: 'Test Reward',
+        rewardName: 'Test Reward',
         status: LoyaltyProgramStatus.ACTIVE
       })
 
@@ -516,8 +537,9 @@ describe('Loyalty Program Lifecycle', () => {
       const createResult = await createLoyaltyProgram({
         name: 'Test Program',
         publicDescription: 'Test',
+        programType: ProgramType.VISITS,
         pointsRequired: 5,
-        reward: 'Test Reward',
+        rewardName: 'Test Reward',
         status: LoyaltyProgramStatus.ACTIVE
       })
 
@@ -559,8 +581,9 @@ describe('Loyalty Program Lifecycle', () => {
       const createResult = await createLoyaltyProgram({
         name: 'Test Program',
         publicDescription: 'Test description',
+        programType: ProgramType.VISITS,
         pointsRequired: 5,
-        reward: 'Test Reward',
+        rewardName: 'Test Reward',
         status: LoyaltyProgramStatus.ACTIVE
       })
 
@@ -577,8 +600,9 @@ describe('Loyalty Program Lifecycle', () => {
       await createLoyaltyProgram({
         name: 'Paused Program',
         publicDescription: 'Paused',
+        programType: ProgramType.VISITS,
         pointsRequired: 5,
-        reward: 'Paused Reward',
+        rewardName: 'Paused Reward',
         status: LoyaltyProgramStatus.PAUSED
       })
 
@@ -594,8 +618,9 @@ describe('Loyalty Program Lifecycle', () => {
       const createResult = await createLoyaltyProgram({
         name: 'Test Program',
         publicDescription: 'Test',
+        programType: ProgramType.VISITS,
         pointsRequired: 5,
-        reward: 'Test Reward',
+        rewardName: 'Test Reward',
         status: LoyaltyProgramStatus.ACTIVE
       })
 
@@ -623,7 +648,8 @@ describe('Loyalty Program Lifecycle', () => {
         data: {
           businessId: testBusiness2.id,
           name: 'Business 2 Program',
-          pointsRequired: 5,
+          programType: ProgramType.VISITS,
+        pointsRequired: 5,
           status: LoyaltyProgramStatus.ACTIVE,
           rewardDefinitions: {
             create: {
@@ -649,7 +675,8 @@ describe('Loyalty Program Lifecycle', () => {
         data: {
           businessId: testBusiness2.id,
           name: 'Business 2 Program',
-          pointsRequired: 5,
+          programType: ProgramType.VISITS,
+        pointsRequired: 5,
           status: LoyaltyProgramStatus.ACTIVE,
           rewardDefinitions: {
             create: {
@@ -676,7 +703,8 @@ describe('Loyalty Program Lifecycle', () => {
         data: {
           businessId: testBusiness2.id,
           name: 'Business 2 Program',
-          pointsRequired: 5,
+          programType: ProgramType.VISITS,
+        pointsRequired: 5,
           status: LoyaltyProgramStatus.ACTIVE,
           rewardDefinitions: {
             create: {
@@ -700,8 +728,9 @@ describe('Loyalty Program Lifecycle', () => {
       const createResult = await createLoyaltyProgram({
         name: 'Test Program',
         publicDescription: 'Test',
+        programType: ProgramType.VISITS,
         pointsRequired: 5,
-        reward: 'Test Reward',
+        rewardName: 'Test Reward',
         status: LoyaltyProgramStatus.ACTIVE
       })
 
@@ -743,8 +772,9 @@ describe('Loyalty Program Lifecycle', () => {
       const createResult = await createLoyaltyProgram({
         name: 'Test Program',
         publicDescription: 'Test',
+        programType: ProgramType.VISITS,
         pointsRequired: 5,
-        reward: 'Test Reward',
+        rewardName: 'Test Reward',
         status: LoyaltyProgramStatus.ACTIVE
       })
 
@@ -793,8 +823,9 @@ describe('Loyalty Program Lifecycle', () => {
       const first = await createLoyaltyProgram({
         name: 'First Program',
         publicDescription: 'First',
+        programType: ProgramType.VISITS,
         pointsRequired: 5,
-        reward: 'First Reward',
+        rewardName: 'First Reward',
         status: LoyaltyProgramStatus.ACTIVE
       })
 
@@ -822,8 +853,9 @@ describe('Loyalty Program Lifecycle', () => {
       const second = await createLoyaltyProgram({
         name: 'Second Program',
         publicDescription: 'Second',
+        programType: ProgramType.VISITS,
         pointsRequired: 10,
-        reward: 'Second Reward',
+        rewardName: 'Second Reward',
         status: LoyaltyProgramStatus.ACTIVE
       })
 
