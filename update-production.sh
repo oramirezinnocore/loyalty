@@ -404,10 +404,17 @@ build_new_version() {
 
     export GIT_SHA="$git_sha"
 
-    # Log the exact command for debugging
-    log_info "Executing: docker compose --env-file $ENV_FILE -f $COMPOSE_FILE build --no-cache app"
+    # Use Docker layer cache for faster builds
+    # Pass --no-cache explicitly if clean build needed: UPDATE_NO_CACHE=1 ./update-production.sh
+    local cache_flag=""
+    if [[ "${UPDATE_NO_CACHE:-}" == "1" ]]; then
+        cache_flag="--no-cache"
+        log_info "Clean build requested (no cache)"
+    fi
 
-    if ! docker compose --env-file "$ENV_FILE" -f "$COMPOSE_FILE" build --no-cache app; then
+    log_info "Executing: docker compose --env-file $ENV_FILE -f $COMPOSE_FILE build $cache_flag app"
+
+    if ! docker compose --env-file "$ENV_FILE" -f "$COMPOSE_FILE" build $cache_flag app; then
         log_error "Application build failed"
         log_error "Expected service: app"
         log_error "Compose file: $COMPOSE_FILE"
