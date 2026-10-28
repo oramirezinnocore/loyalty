@@ -48,6 +48,7 @@ export default function WalletPage() {
   const [data, setData] = useState<WalletData | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
+  const [logoError, setLogoError] = useState(false)
 
   useEffect(() => {
     if (!token) {
@@ -106,12 +107,19 @@ export default function WalletPage() {
         style={{ background: `linear-gradient(135deg, ${brandColor} 0%, ${brandColor}dd 100%)` }}
       >
         <div className="flex items-center gap-4">
-          {membership.loyaltyProgram.business.logoUrl && (
+          {membership.loyaltyProgram.business.logoUrl && !logoError ? (
             <img
               src={membership.loyaltyProgram.business.logoUrl}
               alt={membership.loyaltyProgram.business.name}
               className="w-16 h-16 object-contain bg-white rounded-lg p-2"
+              onError={() => setLogoError(true)}
             />
+          ) : (
+            <div className="w-16 h-16 bg-white/20 rounded-lg flex items-center justify-center">
+              <span className="text-2xl font-bold text-white">
+                {membership.loyaltyProgram.business.name.charAt(0).toUpperCase()}
+              </span>
+            </div>
           )}
           <div className="flex-1">
             <h1 className="text-2xl font-bold">{membership.loyaltyProgram.business.name}</h1>

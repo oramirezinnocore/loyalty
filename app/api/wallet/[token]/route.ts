@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
+import { normalizeLogoUrl } from '@/lib/utils/logo-url'
 
 export async function GET(
   request: NextRequest,
@@ -41,7 +42,22 @@ export async function GET(
       )
     }
 
-    return NextResponse.json({ membership })
+    // Normalize business logoUrl to ensure it's a public API URL
+    const normalizedMembership = {
+      ...membership,
+      loyaltyProgram: {
+        ...membership.loyaltyProgram,
+        business: {
+          ...membership.loyaltyProgram.business,
+          logoUrl: normalizeLogoUrl(
+            membership.loyaltyProgram.business.logoUrl,
+            membership.loyaltyProgram.business.id
+          )
+        }
+      }
+    }
+
+    return NextResponse.json({ membership: normalizedMembership })
   } catch (error) {
     console.error('Wallet fetch error:', error)
     return NextResponse.json(

@@ -15,9 +15,11 @@ export async function GET(
   try {
     const { businessId } = await params
 
-    // Validate business ID format (UUID)
-    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
-    if (!uuidRegex.test(businessId)) {
+    // Validate business ID format (CUID - matches Prisma @default(cuid()))
+    // Format: 'c' + 24 alphanumeric characters (25 total)
+    // This prevents path traversal attempts like "../../../etc/passwd"
+    const cuidPattern = /^c[a-z0-9]{24}$/i
+    if (!cuidPattern.test(businessId)) {
       return new NextResponse('Invalid business ID', { status: 400 })
     }
 
