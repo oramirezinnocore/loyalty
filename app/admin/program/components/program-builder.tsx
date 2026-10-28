@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import { ProgramType, LoyaltyProgramStatus } from '@prisma/client'
 import { createLoyaltyProgram, updateLoyaltyProgram } from '@/app/actions/loyalty-program'
@@ -12,6 +12,7 @@ import { AdditionalRules } from './additional-rules'
 import { PublishOptions } from './publish-options'
 import { CustomerPreview } from './customer-preview'
 import { Button } from '@/components/ui/button'
+import { Check } from 'lucide-react'
 
 interface ProgramBuilderProps {
   mode: 'create' | 'edit'
@@ -36,6 +37,14 @@ export function ProgramBuilder({ mode, program, businessName, businessLogoUrl }:
   const router = useRouter()
   const [loading, setLoading] = useState(false)
   const [errors, setErrors] = useState<Record<string, string>>({})
+  const [activeStep, setActiveStep] = useState(1)
+
+  // Refs for sections
+  const programTypeRef = useRef<HTMLDivElement>(null)
+  const goalRef = useRef<HTMLDivElement>(null)
+  const rewardRef = useRef<HTMLDivElement>(null)
+  const informationRef = useRef<HTMLDivElement>(null)
+  const publishRef = useRef<HTMLDivElement>(null)
 
   const [formData, setFormData] = useState({
     programType: program?.programType || ProgramType.VISITS,
@@ -50,6 +59,48 @@ export function ProgramBuilder({ mode, program, businessName, businessLogoUrl }:
   })
 
   const [manuallyEditedDescription, setManuallyEditedDescription] = useState(!!program?.publicDescription)
+
+  // IntersectionObserver for active step tracking
+  useEffect(() => {
+    const observerOptions = {
+      root: null,
+      rootMargin: '-100px 0px -60% 0px',
+      threshold: 0
+    }
+
+    const observerCallback = (entries: IntersectionObserverEntry[]) => {
+      entries.forEach((entry) => {
+        if (entry.isIntersecting) {
+          const sectionId = entry.target.getAttribute('data-section')
+          if (sectionId === 'program-type') setActiveStep(1)
+          else if (sectionId === 'goal') setActiveStep(2)
+          else if (sectionId === 'reward') setActiveStep(3)
+          else if (sectionId === 'information') setActiveStep(4)
+          else if (sectionId === 'publish') setActiveStep(5)
+        }
+      })
+    }
+
+    const observer = new IntersectionObserver(observerCallback, observerOptions)
+
+    const sections = [
+      programTypeRef.current,
+      goalRef.current,
+      rewardRef.current,
+      informationRef.current,
+      publishRef.current
+    ]
+
+    sections.forEach((section) => {
+      if (section) observer.observe(section)
+    })
+
+    return () => {
+      sections.forEach((section) => {
+        if (section) observer.unobserve(section)
+      })
+    }
+  }, [])
 
   // Auto-generate public description if not manually edited
   useEffect(() => {
@@ -67,6 +118,32 @@ export function ProgramBuilder({ mode, program, businessName, businessLogoUrl }:
   const handlePublicDescriptionChange = (value: string) => {
     setManuallyEditedDescription(true)
     setFormData(prev => ({ ...prev, publicDescription: value }))
+  }
+
+  // Check if step is completed
+  const isStepCompleted = (step: number) => {
+    if (activeStep > step) {
+      switch (step) {
+        case 1: return true // programType always selected (has default)
+        case 2: return formData.goal > 0
+        case 3: return !!formData.rewardName
+        case 4: return !!formData.name && !!formData.publicDescription
+        default: return false
+      }
+    }
+    return false
+  }
+
+  // Scroll to section
+  const scrollToSection = (step: number) => {
+    const refs = [null, programTypeRef, goalRef, rewardRef, informationRef, publishRef]
+    const ref = refs[step]
+    if (ref?.current) {
+      const yOffset = -120 // offset for header and stepper
+      const element = ref.current
+      const y = element.getBoundingClientRect().top + window.pageYOffset + yOffset
+      window.scrollTo({ top: y, behavior: 'smooth' })
+    }
   }
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -122,41 +199,69 @@ export function ProgramBuilder({ mode, program, businessName, businessLogoUrl }:
         </div>
 
         {/* Stepper */}
-        <div className="mb-6 overflow-x-auto">
-          <div className="flex items-center gap-2 min-w-max pb-2">
-            {[
-              { num: 1, label: 'Tipo de programa' },
-              { num: 2, label: 'Meta' },
-              { num: 3, label: 'Recompensa' },
-              { num: 4, label: 'Información' },
-              { num: 5, label: 'Publicar' }
-            ].map((step, idx, arr) => (
-              <div key={step.num} className="flex items-center">
-                <div className="flex items-center gap-2">
-                  <div className={`
-                    w-7 h-7 rounded-full flex items-center justify-center text-sm font-semibold
-                    ${step.num === 1 ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-600'}
-                  `}>
-                    {step.num}
+        <div className="sticky top-0 z-20 bg-gray-50/95 backdrop-blur -mx-4 sm:-mx-6 lg:-mx-8 px-4 sm:px-6 lg:px-8 py-3 mb-6 border-b border-gray-200">
+          <div className="overflow-x-auto">
+            <div className="flex items-center gap-2 min-w-max">
+              {[
+                { num: 1, label: 'Tipo de programa' },
+                { num: 2, label: 'Meta' },
+                { num: 3, label: 'Recompensa' },
+                { num: 4, label: 'Información' },
+                { num: 5, label: 'Publicar' }
+              ].map((step, idx, arr) => {
+                const isActive = activeStep === step.num
+                const isCompleted = isStepCompleted(step.num)
+
+                return (
+                  <div key={step.num} className="flex items-center">
+                    <button
+                      type="button"
+                      onClick={() => scrollToSection(step.num)}
+                      className="flex items-center gap-2 cursor-pointer hover:opacity-80 transition-opacity"
+                    >
+                      <div className={`
+                        w-7 h-7 rounded-full flex items-center justify-center text-sm font-semibold transition-colors
+                        ${isActive
+                          ? 'bg-blue-600 text-white'
+                          : isCompleted
+                            ? 'bg-blue-600 text-white'
+                            : 'bg-gray-200 text-gray-600'
+                        }
+                      `}>
+                        {isCompleted && !isActive ? (
+                          <Check className="w-4 h-4" />
+                        ) : (
+                          step.num
+                        )}
+                      </div>
+                      <span className={`text-sm font-medium transition-colors ${
+                        isActive
+                          ? 'text-gray-900'
+                          : isCompleted
+                            ? 'text-gray-700'
+                            : 'text-gray-500'
+                      }`}>
+                        {step.label}
+                      </span>
+                    </button>
+                    {idx < arr.length - 1 && (
+                      <div className={`w-8 h-px mx-3 transition-colors ${
+                        isCompleted ? 'bg-blue-600' : 'bg-gray-300'
+                      }`} />
+                    )}
                   </div>
-                  <span className={`text-sm font-medium ${step.num === 1 ? 'text-gray-900' : 'text-gray-500'}`}>
-                    {step.label}
-                  </span>
-                </div>
-                {idx < arr.length - 1 && (
-                  <div className="w-8 h-px bg-gray-300 mx-3" />
-                )}
-              </div>
-            ))}
+                )
+              })}
+            </div>
           </div>
         </div>
 
         <form onSubmit={handleSubmit}>
-          <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,2fr),400px] gap-6">
+          <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,1fr),380px] gap-6">
             {/* Left Column - Unified Builder */}
             <div className="bg-white rounded-lg border border-gray-200 divide-y divide-gray-200">
               {/* Step 1: Program Type */}
-              <div className="p-5">
+              <div ref={programTypeRef} data-section="program-type" className="p-5 scroll-mt-32">
                 <ProgramTypeSelector
                   selectedType={formData.programType}
                   onChange={(type) => setFormData(prev => ({ ...prev, programType: type }))}
@@ -165,7 +270,7 @@ export function ProgramBuilder({ mode, program, businessName, businessLogoUrl }:
               </div>
 
               {/* Step 2: Goal */}
-              <div className="p-5">
+              <div ref={goalRef} data-section="goal" className="p-5 scroll-mt-32">
                 <GoalConfiguration
                   programType={formData.programType}
                   goal={formData.goal}
@@ -175,7 +280,7 @@ export function ProgramBuilder({ mode, program, businessName, businessLogoUrl }:
               </div>
 
               {/* Step 3: Reward */}
-              <div className="p-5">
+              <div ref={rewardRef} data-section="reward" className="p-5 scroll-mt-32">
                 <RewardDefinition
                   rewardName={formData.rewardName}
                   rewardDescription={formData.rewardDescription}
@@ -185,8 +290,8 @@ export function ProgramBuilder({ mode, program, businessName, businessLogoUrl }:
                 />
               </div>
 
-              {/* Step 4: Program Information */}
-              <div className="p-5">
+              {/* Step 4: Program Information + Additional Rules */}
+              <div ref={informationRef} data-section="information" className="p-5 scroll-mt-32 space-y-6">
                 <ProgramInformation
                   name={formData.name}
                   publicDescription={formData.publicDescription}
@@ -195,21 +300,20 @@ export function ProgramBuilder({ mode, program, businessName, businessLogoUrl }:
                   nameError={errors.name}
                   descriptionError={errors.publicDescription}
                 />
+
+                <div className="pt-4 border-t border-gray-200">
+                  <AdditionalRules
+                    termsAndConditions={formData.termsAndConditions}
+                    expirationDays={formData.expirationDays}
+                    onTermsChange={(terms) => setFormData(prev => ({ ...prev, termsAndConditions: terms }))}
+                    onExpirationChange={(days) => setFormData(prev => ({ ...prev, expirationDays: days }))}
+                    expirationError={errors.expirationDays}
+                  />
+                </div>
               </div>
 
-              {/* Step 5: Additional Rules */}
-              <div className="p-5">
-                <AdditionalRules
-                  termsAndConditions={formData.termsAndConditions}
-                  expirationDays={formData.expirationDays}
-                  onTermsChange={(terms) => setFormData(prev => ({ ...prev, termsAndConditions: terms }))}
-                  onExpirationChange={(days) => setFormData(prev => ({ ...prev, expirationDays: days }))}
-                  expirationError={errors.expirationDays}
-                />
-              </div>
-
-              {/* Step 6: Publish Options */}
-              <div className="p-5">
+              {/* Step 5: Publish Options */}
+              <div ref={publishRef} data-section="publish" className="p-5 scroll-mt-32">
                 <PublishOptions
                   programType={formData.programType}
                   selected={formData.publishOption}
@@ -240,8 +344,8 @@ export function ProgramBuilder({ mode, program, businessName, businessLogoUrl }:
             </div>
 
             {/* Right Column - Preview */}
-            <div className="lg:col-span-1">
-              <div className="sticky top-8">
+            <div className="hidden lg:block">
+              <div className="sticky top-24">
                 <CustomerPreview
                   programType={formData.programType}
                   goal={formData.goal}
@@ -255,6 +359,21 @@ export function ProgramBuilder({ mode, program, businessName, businessLogoUrl }:
                 />
               </div>
             </div>
+          </div>
+
+          {/* Mobile Preview (below builder) */}
+          <div className="lg:hidden mt-6">
+            <CustomerPreview
+              programType={formData.programType}
+              goal={formData.goal}
+              currentProgress={0}
+              rewardName={formData.rewardName}
+              rewardDescription={formData.rewardDescription}
+              programName={formData.name || 'Programa de lealtad'}
+              publicDescription={formData.publicDescription}
+              businessName={businessName}
+              businessLogoUrl={businessLogoUrl}
+            />
           </div>
         </form>
       </div>
