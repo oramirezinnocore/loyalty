@@ -56,10 +56,10 @@ describe('Logo URL Utilities', () => {
       expect(url).toBe(correctUrl)
     })
 
-    it('strips version parameter from correct URL', () => {
+    it('preserves version parameter from correct URL (cache busting)', () => {
       const urlWithVersion = `/api/public/assets/businesses/${businessId}/logo?v=123456789`
       const url = normalizeLogoUrl(urlWithVersion, businessId)
-      expect(url).toBe(`/api/public/assets/businesses/${businessId}/logo`)
+      expect(url).toBe(urlWithVersion) // Preserve version for cache busting
     })
 
     it('converts legacy filesystem path to public URL', () => {

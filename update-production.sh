@@ -166,6 +166,19 @@ verify_deployment_config() {
         exit 1
     fi
 
+    # Verify production uploads volume exists
+    if ! docker volume inspect loyalty-uploads &> /dev/null; then
+        log_warning "Production uploads volume 'loyalty-uploads' not found"
+        log_warning "This volume stores business logos and must persist across deployments"
+        log_warning ""
+        log_warning "Creating volume now..."
+        if ! docker volume create loyalty-uploads; then
+            log_error "Failed to create loyalty-uploads volume"
+            exit 1
+        fi
+        log_success "Created loyalty-uploads volume"
+    fi
+
     # Verify required environment variables (without printing values)
     if ! grep -q "^DB_PASSWORD=." "$ENV_FILE"; then
         log_error "DB_PASSWORD not set in $ENV_FILE"
@@ -185,7 +198,7 @@ verify_deployment_config() {
 
     log_success "Deployment configuration valid"
     log_info "Services: app, db"
-    log_info "Production volume: loyalty-postgres-data (verified)"
+    log_info "Production volumes: loyalty-postgres-data, loyalty-uploads (verified)"
 }
 
 capture_current_state() {

@@ -72,16 +72,20 @@ export function getVersionedLogoUrl(
  * Use this when working with Business.logoUrl from the database which might
  * contain legacy values.
  *
+ * IMPORTANT: Preserves version parameters (?v=timestamp) for cache busting.
+ * The route.ts endpoint uses immutable caching, so version param is critical
+ * to force browser cache refresh when logo changes.
+ *
  * @param logoUrl - Raw logoUrl from Business.logoUrl field
  * @param businessId - Business ID to construct correct URL
  * @returns Normalized public logo URL or null
  *
  * @example
- * normalizeLogo URL('uploads/businesses/cm123.../logo.webp', 'cm123...')
+ * normalizeLogoUrl('uploads/businesses/cm123.../logo.webp', 'cm123...')
  * // "/api/public/assets/businesses/cm123.../logo"
  *
- * normalizeLogoUrl('/api/public/assets/businesses/cm123.../logo', 'cm123...')
- * // "/api/public/assets/businesses/cm123.../logo" (already correct)
+ * normalizeLogoUrl('/api/public/assets/businesses/cm123.../logo?v=123', 'cm123...')
+ * // "/api/public/assets/businesses/cm123.../logo?v=123" (preserves version)
  *
  * normalizeLogoUrl(null, 'cm123...') // null
  */
@@ -94,10 +98,9 @@ export function normalizeLogoUrl(
     return null
   }
 
-  // Already a public API URL (with or without version param)
+  // Already a public API URL - preserve it as-is (including version param)
   if (logoUrl.startsWith('/api/public/assets/businesses/')) {
-    // Strip version param for consistency
-    return logoUrl.split('?')[0]
+    return logoUrl  // Keep version parameter for cache busting
   }
 
   // Legacy filesystem path or other format - construct public URL

@@ -47,7 +47,10 @@ volumes:
     external: true
     name: loyalty-postgres-data
 
-  # User uploads (business logos) - NEW persistent volume
-  # Using external: false with explicit name for stable identity
+  # User uploads (business logos) - PERSISTENT VOLUME
+  # CRITICAL: Must be external: true to prevent Docker Compose from recreating/renaming it
+  # This ensures uploaded files survive container recreation and deployments
+  # Volume must be created manually before first deployment: docker volume create loyalty-uploads
   loyalty-uploads:
+    external: true
     name: loyalty-uploads
