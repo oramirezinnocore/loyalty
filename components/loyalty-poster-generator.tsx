@@ -88,8 +88,15 @@ export function LoyaltyPosterGenerator({ data }: LoyaltyPosterGeneratorProps) {
       // Logo section
       let currentY = 280
 
+      console.log('[Poster] Logo section START', {
+        currentY,
+        logoUrl: data.logoUrl,
+        hasLogoUrl: !!data.logoUrl
+      })
+
       if (data.logoUrl) {
         try {
+          console.log('[Poster] Entering logo load branch')
           console.log('[Poster] Starting logo load:', data.logoUrl)
 
           // Robust logo loading: fetch + blob + objectURL
@@ -112,9 +119,20 @@ export function LoyaltyPosterGenerator({ data }: LoyaltyPosterGeneratorProps) {
 
           const logo = new Image()
 
+          // Add timeout to prevent infinite hang
           await new Promise((resolve, reject) => {
-            logo.onload = resolve
-            logo.onerror = reject
+            const timeout = setTimeout(() => {
+              reject(new Error('Logo load timeout after 10s'))
+            }, 10000)
+
+            logo.onload = () => {
+              clearTimeout(timeout)
+              resolve(undefined)
+            }
+            logo.onerror = (err) => {
+              clearTimeout(timeout)
+              reject(err)
+            }
             logo.src = logoObjectURL
           })
 
@@ -173,6 +191,8 @@ export function LoyaltyPosterGenerator({ data }: LoyaltyPosterGeneratorProps) {
           URL.revokeObjectURL(logoObjectURL)
 
           currentY += logoSize / 2 + 100
+
+          console.log('[Poster] Logo section complete, new currentY:', currentY)
         } catch (error) {
           // Log error for debugging (development only)
           console.error('[Poster] LOGO FAILED:', {
@@ -180,6 +200,8 @@ export function LoyaltyPosterGenerator({ data }: LoyaltyPosterGeneratorProps) {
             error: error instanceof Error ? error.message : 'Unknown error',
             stack: error instanceof Error ? error.stack : undefined
           })
+
+          console.log('[Poster] Rendering FALLBACK initial')
 
           // Fallback to initial
           ctx.fillStyle = lightBrand
@@ -194,8 +216,12 @@ export function LoyaltyPosterGenerator({ data }: LoyaltyPosterGeneratorProps) {
           ctx.fillText(data.businessName.charAt(0).toUpperCase(), width / 2, currentY)
 
           currentY += 230
+
+          console.log('[Poster] FALLBACK rendered at currentY:', currentY)
         }
       } else {
+        console.log('[Poster] No logoUrl - rendering initial')
+
         // No logo - show initial
         ctx.fillStyle = lightBrand
         ctx.beginPath()
@@ -209,7 +235,11 @@ export function LoyaltyPosterGenerator({ data }: LoyaltyPosterGeneratorProps) {
         ctx.fillText(data.businessName.charAt(0).toUpperCase(), width / 2, currentY)
 
         currentY += 230
+
+        console.log('[Poster] Initial rendered, new currentY:', currentY)
       }
+
+      console.log('[Poster] Logo section END, proceeding to Business Name at currentY:', currentY)
 
       // Business Name
       ctx.fillStyle = brandColor
@@ -334,8 +364,11 @@ export function LoyaltyPosterGenerator({ data }: LoyaltyPosterGeneratorProps) {
       ctx.textAlign = 'center'
       ctx.fillText('Programa de lealtad digital · Powered by IntusPath', width / 2, currentY)
 
+      console.log('[Poster] All rendering complete, calling toBlob()')
+
       // Download
       canvas.toBlob((blob) => {
+        console.log('[Poster] toBlob callback', { blobExists: !!blob, blobSize: blob?.size })
         if (blob) {
           const url = URL.createObjectURL(blob)
           const link = document.createElement('a')
