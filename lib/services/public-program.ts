@@ -12,6 +12,7 @@
 
 import { prisma } from '@/lib/prisma'
 import { LoyaltyProgramStatus, BusinessStatus } from '@prisma/client'
+import { normalizeLogoUrl } from '@/lib/utils/logo-url'
 
 export interface PublicProgramData {
   business: {
@@ -115,10 +116,16 @@ export async function getPublicBusinessProgramBySlug(
     })
 
     // Success - return business with program (or null if no active program)
+    // Normalize logo URL to ensure it's always a public API URL
+    const normalizedLogoUrl = normalizeLogoUrl(business.logoUrl, business.id)
+
     return {
       success: true,
       data: {
-        business,
+        business: {
+          ...business,
+          logoUrl: normalizedLogoUrl
+        },
         program: program || null
       }
     }

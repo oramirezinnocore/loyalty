@@ -39,6 +39,7 @@ export default function JoinPage() {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
   const [showTermsModal, setShowTermsModal] = useState(false)
+  const [logoError, setLogoError] = useState(false)
   const [formData, setFormData] = useState({
     firstName: '',
     lastName: '',
@@ -169,13 +170,14 @@ export default function JoinPage() {
             }}
           >
             <div className="text-center space-y-4">
-              {logoUrl ? (
+              {logoUrl && !logoError ? (
                 <div className="flex justify-center">
                   <div className="w-20 h-20 bg-white rounded-lg p-2 flex items-center justify-center">
                     <img
                       src={logoUrl}
                       alt={businessData.business.name}
                       className="w-full h-full object-contain"
+                      onError={() => setLogoError(true)}
                     />
                   </div>
                 </div>
@@ -235,13 +237,14 @@ export default function JoinPage() {
             }}
           >
             <div className="text-center space-y-4">
-              {logoUrl ? (
+              {logoUrl && !logoError ? (
                 <div className="flex justify-center">
                   <div className="w-24 h-24 bg-white rounded-lg p-2 flex items-center justify-center">
                     <img
                       src={logoUrl}
                       alt={businessData.business.name}
                       className="w-full h-full object-contain"
+                      onError={() => setLogoError(true)}
                     />
                   </div>
                 </div>
