@@ -57,44 +57,44 @@ export function GoalConfiguration({ programType, goal, onChange, error }: GoalCo
   }
 
   return (
-    <div className="bg-white rounded-lg border p-6">
+    <div>
       {/* Header */}
-      <div className="mb-6">
-        <h2 className="text-xl font-semibold text-gray-900 mb-2">
+      <div className="mb-4">
+        <h2 className="text-lg font-semibold text-gray-900 mb-1">
           2. Configura la meta
         </h2>
-        <p className="text-gray-600">
+        <p className="text-sm text-gray-600">
           {getQuestion()}
         </p>
       </div>
 
       {/* Goal Input */}
-      <div className="mb-4">
-        <div className="flex items-center gap-3">
+      <div className="mb-3">
+        <div className="flex items-center gap-2">
           <input
             type="number"
             min="1"
             max="100"
             value={goal}
             onChange={(e) => onChange(parseInt(e.target.value) || 1)}
-            className="w-24 px-4 py-2 text-lg font-semibold border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className="w-20 px-3 py-2 text-base font-semibold border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
           />
-          <span className="text-gray-700 font-medium">{getGoalLabel()}</span>
+          <span className="text-sm text-gray-700 font-medium">{getGoalLabel()}</span>
         </div>
         {error && (
-          <p className="mt-2 text-sm text-red-600">{error}</p>
+          <p className="mt-1 text-sm text-red-600">{error}</p>
         )}
       </div>
 
       {/* Callout */}
-      <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-        <p className="text-sm text-blue-900">{getCallout()}</p>
+      <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
+        <p className="text-xs text-blue-900">{getCallout()}</p>
       </div>
 
       {/* Additional Info for Streak */}
       {programType === ProgramType.STREAK && (
-        <div className="mt-3 bg-gray-50 border border-gray-200 rounded-lg p-4">
-          <p className="text-sm text-gray-700">
+        <div className="mt-2 bg-gray-50 border border-gray-200 rounded-lg p-3">
+          <p className="text-xs text-gray-700">
             ℹ️ Si el cliente interrumpe la racha, deberá comenzar nuevamente.
           </p>
         </div>

@@ -18,17 +18,17 @@ export function ProgramInformation({
   descriptionError
 }: ProgramInformationProps) {
   return (
-    <div className="bg-white rounded-lg border p-6">
+    <div>
       {/* Header */}
-      <div className="mb-6">
-        <h2 className="text-xl font-semibold text-gray-900 mb-2">
+      <div className="mb-4">
+        <h2 className="text-lg font-semibold text-gray-900 mb-1">
           4. Información que verá tu cliente
         </h2>
       </div>
 
       {/* Program Name */}
-      <div className="mb-4">
-        <label className="block text-sm font-medium text-gray-700 mb-2">
+      <div className="mb-3">
+        <label className="block text-sm font-medium text-gray-700 mb-1.5">
           Nombre del programa *
         </label>
         <input
@@ -36,30 +36,30 @@ export function ProgramInformation({
           value={name}
           onChange={(e) => onNameChange(e.target.value)}
           placeholder="Ej: Cliente Frecuente Cono Churro"
-          className="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+          className="w-full h-10 px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
         />
         {nameError && (
-          <p className="mt-1 text-sm text-red-600">{nameError}</p>
+          <p className="mt-1 text-xs text-red-600">{nameError}</p>
         )}
       </div>
 
       {/* Public Description */}
       <div>
-        <label className="block text-sm font-medium text-gray-700 mb-2">
-          Descripción pública del programa *
+        <label className="block text-sm font-medium text-gray-700 mb-1.5">
+          Descripción pública *
         </label>
         <textarea
           value={publicDescription}
           onChange={(e) => onDescriptionChange(e.target.value)}
           placeholder="Ej: Completa 5 compras y recibe un churro gratis"
-          rows={3}
-          className="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+          rows={2}
+          className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"
         />
         {descriptionError && (
-          <p className="mt-1 text-sm text-red-600">{descriptionError}</p>
+          <p className="mt-1 text-xs text-red-600">{descriptionError}</p>
         )}
         <p className="mt-1 text-xs text-gray-500">
-          Esta descripción se mostrará a los clientes en su monedero.
+          Se mostrará en el monedero del cliente
         </p>
       </div>
     </div>

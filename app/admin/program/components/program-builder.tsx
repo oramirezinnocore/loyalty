@@ -110,84 +110,131 @@ export function ProgramBuilder({ mode, program, businessName, businessLogoUrl }:
 
   return (
     <div className="min-h-screen bg-gray-50">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <div className="max-w-[1400px] mx-auto px-4 sm:px-6 lg:px-8 py-6">
         {/* Header */}
-        <div className="mb-8">
+        <div className="mb-5">
           <h1 className="text-3xl font-bold text-gray-900">
             {mode === 'create' ? 'Crear programa de lealtad' : 'Editar programa de lealtad'}
           </h1>
-          <p className="mt-2 text-gray-600">
+          <p className="mt-1 text-sm text-gray-600">
             Configura cómo quieres recompensar a tus clientes.
           </p>
         </div>
 
+        {/* Stepper */}
+        <div className="mb-6 overflow-x-auto">
+          <div className="flex items-center gap-2 min-w-max pb-2">
+            {[
+              { num: 1, label: 'Tipo de programa' },
+              { num: 2, label: 'Meta' },
+              { num: 3, label: 'Recompensa' },
+              { num: 4, label: 'Información' },
+              { num: 5, label: 'Publicar' }
+            ].map((step, idx, arr) => (
+              <div key={step.num} className="flex items-center">
+                <div className="flex items-center gap-2">
+                  <div className={`
+                    w-7 h-7 rounded-full flex items-center justify-center text-sm font-semibold
+                    ${step.num === 1 ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-600'}
+                  `}>
+                    {step.num}
+                  </div>
+                  <span className={`text-sm font-medium ${step.num === 1 ? 'text-gray-900' : 'text-gray-500'}`}>
+                    {step.label}
+                  </span>
+                </div>
+                {idx < arr.length - 1 && (
+                  <div className="w-8 h-px bg-gray-300 mx-3" />
+                )}
+              </div>
+            ))}
+          </div>
+        </div>
+
         <form onSubmit={handleSubmit}>
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-            {/* Left Column - Form */}
-            <div className="lg:col-span-2 space-y-6">
+          <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,2fr),400px] gap-6">
+            {/* Left Column - Unified Builder */}
+            <div className="bg-white rounded-lg border border-gray-200 divide-y divide-gray-200">
               {/* Step 1: Program Type */}
-              <ProgramTypeSelector
-                selectedType={formData.programType}
-                onChange={(type) => setFormData(prev => ({ ...prev, programType: type }))}
-                error={errors.programType}
-              />
+              <div className="p-5">
+                <ProgramTypeSelector
+                  selectedType={formData.programType}
+                  onChange={(type) => setFormData(prev => ({ ...prev, programType: type }))}
+                  error={errors.programType}
+                />
+              </div>
 
               {/* Step 2: Goal */}
-              <GoalConfiguration
-                programType={formData.programType}
-                goal={formData.goal}
-                onChange={(goal) => setFormData(prev => ({ ...prev, goal }))}
-                error={errors.pointsRequired}
-              />
+              <div className="p-5">
+                <GoalConfiguration
+                  programType={formData.programType}
+                  goal={formData.goal}
+                  onChange={(goal) => setFormData(prev => ({ ...prev, goal }))}
+                  error={errors.pointsRequired}
+                />
+              </div>
 
               {/* Step 3: Reward */}
-              <RewardDefinition
-                rewardName={formData.rewardName}
-                rewardDescription={formData.rewardDescription}
-                onRewardChange={(rewardName) => setFormData(prev => ({ ...prev, rewardName }))}
-                onDescriptionChange={(desc) => setFormData(prev => ({ ...prev, rewardDescription: desc }))}
-                rewardError={errors.rewardName}
-              />
+              <div className="p-5">
+                <RewardDefinition
+                  rewardName={formData.rewardName}
+                  rewardDescription={formData.rewardDescription}
+                  onRewardChange={(rewardName) => setFormData(prev => ({ ...prev, rewardName }))}
+                  onDescriptionChange={(desc) => setFormData(prev => ({ ...prev, rewardDescription: desc }))}
+                  rewardError={errors.rewardName}
+                />
+              </div>
 
               {/* Step 4: Program Information */}
-              <ProgramInformation
-                name={formData.name}
-                publicDescription={formData.publicDescription}
-                onNameChange={(name) => setFormData(prev => ({ ...prev, name }))}
-                onDescriptionChange={handlePublicDescriptionChange}
-                nameError={errors.name}
-                descriptionError={errors.publicDescription}
-              />
+              <div className="p-5">
+                <ProgramInformation
+                  name={formData.name}
+                  publicDescription={formData.publicDescription}
+                  onNameChange={(name) => setFormData(prev => ({ ...prev, name }))}
+                  onDescriptionChange={handlePublicDescriptionChange}
+                  nameError={errors.name}
+                  descriptionError={errors.publicDescription}
+                />
+              </div>
 
               {/* Step 5: Additional Rules */}
-              <AdditionalRules
-                termsAndConditions={formData.termsAndConditions}
-                expirationDays={formData.expirationDays}
-                onTermsChange={(terms) => setFormData(prev => ({ ...prev, termsAndConditions: terms }))}
-                onExpirationChange={(days) => setFormData(prev => ({ ...prev, expirationDays: days }))}
-                expirationError={errors.expirationDays}
-              />
+              <div className="p-5">
+                <AdditionalRules
+                  termsAndConditions={formData.termsAndConditions}
+                  expirationDays={formData.expirationDays}
+                  onTermsChange={(terms) => setFormData(prev => ({ ...prev, termsAndConditions: terms }))}
+                  onExpirationChange={(days) => setFormData(prev => ({ ...prev, expirationDays: days }))}
+                  expirationError={errors.expirationDays}
+                />
+              </div>
 
               {/* Step 6: Publish Options */}
-              <PublishOptions
-                selected={formData.publishOption}
-                onChange={(option) => setFormData(prev => ({ ...prev, publishOption: option }))}
-                error={errors.status}
-              />
+              <div className="p-5">
+                <PublishOptions
+                  programType={formData.programType}
+                  selected={formData.publishOption}
+                  onChange={(option) => setFormData(prev => ({ ...prev, publishOption: option }))}
+                  error={errors.status}
+                />
+              </div>
 
               {/* Action Buttons */}
-              <div className="flex gap-3 pt-4">
-                <Button type="submit" disabled={loading} className="flex-1" size="lg">
-                  {loading ? 'Guardando...' : mode === 'create' ? 'Crear programa' : 'Guardar cambios'}
-                </Button>
+              <div className="p-5 flex flex-col sm:flex-row justify-between gap-3">
                 <Button
                   type="button"
                   variant="outline"
                   onClick={() => router.push('/admin/program')}
                   disabled={loading}
-                  size="lg"
+                  className="sm:w-auto"
                 >
                   Cancelar
+                </Button>
+                <Button
+                  type="submit"
+                  disabled={loading}
+                  className="sm:w-auto sm:min-w-[180px]"
+                >
+                  {loading ? 'Guardando...' : mode === 'create' ? 'Crear programa' : 'Guardar cambios'}
                 </Button>
               </div>
             </div>
