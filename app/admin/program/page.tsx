@@ -2,7 +2,7 @@ import { redirect } from 'next/navigation'
 import { getSession, getUserBusinesses } from '@/lib/authorization'
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card'
 import { QRGenerator } from '@/components/qr-generator'
-import { QRDownloadButton } from '@/components/qr-download-button'
+import { LoyaltyPosterGenerator } from '@/components/loyalty-poster-generator'
 import { ProgramLifecycle } from './program-lifecycle'
 import { prisma } from '@/lib/prisma'
 import Link from 'next/link'
@@ -158,23 +158,32 @@ export default async function ProgramPage() {
             {/* QR Code - Only for ACTIVE programs */}
             <Card>
               <CardHeader>
-                <CardTitle>Código QR de registro</CardTitle>
+                <CardTitle>Material promocional</CardTitle>
               </CardHeader>
               <CardContent>
-                <p className="text-sm text-gray-600 mb-4">
+                <p className="text-sm text-gray-600 mb-6">
                   Los clientes pueden escanear este código para unirse al programa
                 </p>
 
-                <div className="bg-white border-2 border-gray-200 rounded-lg p-6 mb-4 flex flex-col items-center">
+                <div className="bg-white border-2 border-gray-200 rounded-lg p-6 mb-6 flex flex-col items-center">
                   <QRGenerator value={acquisitionUrl} size={256} />
                   <p className="mt-4 text-sm text-gray-600 text-center break-all">
                     {acquisitionUrl}
                   </p>
                 </div>
 
-                <QRDownloadButton
-                  acquisitionUrl={acquisitionUrl}
-                  businessSlug={business.slug}
+                <LoyaltyPosterGenerator
+                  data={{
+                    businessName: business.name,
+                    businessSlug: business.slug,
+                    logoUrl: business.logoUrl,
+                    brandColor: business.brandColor || '#6B7280',
+                    programType: activeProgram.programType,
+                    goal: activeProgram.pointsRequired,
+                    rewardName: activeProgram.rewardDefinitions[0]?.name || 'Recompensa especial',
+                    publicDescription: activeProgram.publicDescription,
+                    acquisitionUrl
+                  }}
                 />
               </CardContent>
             </Card>
