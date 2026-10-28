@@ -90,16 +90,26 @@ export function LoyaltyPosterGenerator({ data }: LoyaltyPosterGeneratorProps) {
 
       if (data.logoUrl) {
         try {
+          // Robust logo loading: fetch + blob + objectURL
+          // This avoids CORS issues and handles relative URLs correctly
+          const logoResponse = await fetch(data.logoUrl)
+
+          if (!logoResponse.ok) {
+            throw new Error(`Logo fetch failed: ${logoResponse.status}`)
+          }
+
+          const logoBlob = await logoResponse.blob()
+          const logoObjectURL = URL.createObjectURL(logoBlob)
+
           const logo = new Image()
-          logo.crossOrigin = 'anonymous'
+
           await new Promise((resolve, reject) => {
             logo.onload = resolve
             logo.onerror = reject
-            logo.src = data.logoUrl!
+            logo.src = logoObjectURL
           })
 
           const logoSize = 300
-          const logoX = (width - logoSize) / 2
 
           // White circle background for logo
           ctx.fillStyle = '#FFFFFF'
@@ -111,7 +121,7 @@ export function LoyaltyPosterGenerator({ data }: LoyaltyPosterGeneratorProps) {
           ctx.fill()
           ctx.shadowBlur = 0
 
-          // Draw logo (contain)
+          // Draw logo (contain - preserve aspect ratio)
           const aspectRatio = logo.width / logo.height
           let drawWidth = logoSize
           let drawHeight = logoSize
@@ -130,8 +140,17 @@ export function LoyaltyPosterGenerator({ data }: LoyaltyPosterGeneratorProps) {
             drawHeight
           )
 
+          // Clean up object URL
+          URL.revokeObjectURL(logoObjectURL)
+
           currentY += logoSize / 2 + 100
         } catch (error) {
+          // Log error for debugging (development only)
+          console.error('Logo loading failed for poster generation:', {
+            logoUrl: data.logoUrl,
+            error: error instanceof Error ? error.message : 'Unknown error'
+          })
+
           // Fallback to initial
           ctx.fillStyle = lightBrand
           ctx.beginPath()

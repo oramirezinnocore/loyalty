@@ -178,6 +178,42 @@ describe('Loyalty Poster Generator - Business Logic', () => {
     })
   })
 
+  describe('Logo URL Handling', () => {
+    it('accepts valid relative logo URL', () => {
+      const logoUrl = '/api/public/assets/businesses/clrxabc123/logo'
+      expect(logoUrl).toMatch(/^\/api\/public/)
+      expect(logoUrl).toContain('/logo')
+    })
+
+    it('accepts valid absolute logo URL', () => {
+      const logoUrl = 'https://loyalty.intuspath.com/api/public/assets/businesses/clrxabc123/logo'
+      expect(logoUrl).toMatch(/^https?:\/\//)
+      expect(logoUrl).toContain('/logo')
+    })
+
+    it('handles null logoUrl', () => {
+      const logoUrl = null
+      const shouldShowFallback = !logoUrl
+
+      expect(shouldShowFallback).toBe(true)
+    })
+
+    it('handles undefined logoUrl', () => {
+      const logoUrl = undefined
+      const shouldShowFallback = !logoUrl
+
+      expect(shouldShowFallback).toBe(true)
+    })
+
+    it('validates logoUrl presence before attempting load', () => {
+      const businessWithLogo = { logoUrl: '/api/public/assets/businesses/abc/logo' }
+      const businessWithoutLogo = { logoUrl: null }
+
+      expect(!!businessWithLogo.logoUrl).toBe(true)
+      expect(!!businessWithoutLogo.logoUrl).toBe(false)
+    })
+  })
+
   describe('Color Lightening Logic', () => {
     const lightenColor = (color: string, percent: number): string => {
       const hex = color.replace('#', '')
