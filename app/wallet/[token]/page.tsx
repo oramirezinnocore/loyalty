@@ -49,6 +49,10 @@ export default function WalletPage() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   const [logoError, setLogoError] = useState(false)
+  const [capabilities, setCapabilities] = useState<{ apple: boolean; google: boolean }>({
+    apple: false,
+    google: false
+  })
 
   useEffect(() => {
     if (!token) {
@@ -57,13 +61,20 @@ export default function WalletPage() {
       return
     }
 
-    fetch(`/api/wallet/${token}`)
-      .then(res => res.json())
-      .then(data => {
-        if (data.error) {
-          setError(data.error)
+    // Fetch wallet data and capabilities in parallel
+    Promise.all([
+      fetch(`/api/wallet/${token}`).then(res => res.json()),
+      fetch('/api/wallet/capabilities').then(res => res.json())
+    ])
+      .then(([walletData, capabilitiesData]) => {
+        if (walletData.error) {
+          setError(walletData.error)
         } else {
-          setData(data)
+          setData(walletData)
+        }
+
+        if (capabilitiesData.capabilities) {
+          setCapabilities(capabilitiesData.capabilities)
         }
       })
       .catch(() => setError('Error al cargar tu monedero'))
@@ -204,9 +215,24 @@ export default function WalletPage() {
           </CardContent>
         </Card>
 
-        {/* Wallet Buttons */}
-        <GoogleWalletButton membershipToken={membership.publicToken} />
-        <AppleWalletButton membershipToken={membership.publicToken} />
+        {/* Wallet Buttons - Only show if configured */}
+        {capabilities.google && (
+          <GoogleWalletButton membershipToken={membership.publicToken} />
+        )}
+        {capabilities.apple && (
+          <AppleWalletButton membershipToken={membership.publicToken} />
+        )}
+
+        {/* No wallets configured message */}
+        {!capabilities.google && !capabilities.apple && (
+          <Card>
+            <CardContent className="p-6 text-center text-gray-500">
+              <p className="text-sm">
+                Las integraciones de billetera digital estarán disponibles próximamente
+              </p>
+            </CardContent>
+          </Card>
+        )}
       </div>
     </div>
   )

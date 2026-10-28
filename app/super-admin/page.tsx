@@ -1,18 +1,22 @@
 import { redirect } from 'next/navigation'
-import { requireSuperAdmin } from '@/lib/authorization'
+import { requireSuperAdmin, getSession } from '@/lib/authorization'
 import { Card, CardContent } from '@/components/ui/card'
 import { prisma } from '@/lib/prisma'
 import Link from 'next/link'
 import { calculateMRR, getSubscriptionCounts } from '@/lib/billing-enforcement'
+import { SuperAdminHeader } from '@/components/super-admin-header'
 
 export const instant = false
 
 export default async function SuperAdminDashboard() {
+  let session
   try {
-    await requireSuperAdmin()
+    session = await requireSuperAdmin()
   } catch {
     redirect('/auth/signin')
   }
+
+  const user = session.user as any
 
   const [totalBusinesses, activeBusinesses, suspendedBusinesses, totalCustomers, mrr, subCounts] = await Promise.all([
     prisma.business.count(),
@@ -25,12 +29,12 @@ export default async function SuperAdminDashboard() {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      <div className="bg-gradient-to-r from-purple-600 to-blue-600 text-white">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
-          <h1 className="text-3xl font-bold">Super Admin Dashboard</h1>
-          <p className="text-purple-100 mt-1">IntusPath Loyalty Platform</p>
-        </div>
-      </div>
+      <SuperAdminHeader
+        user={{
+          name: user.name,
+          email: user.email
+        }}
+      />
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
         {/* Stats Cards */}

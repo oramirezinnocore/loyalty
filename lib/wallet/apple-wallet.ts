@@ -265,10 +265,13 @@ export function isAppleWalletConfigured(): boolean {
     return true // Available in mock mode
   }
 
+  // CRITICAL: Must validate ALL certificates required for PKCS#7 signing
+  // WWDR_CERTIFICATE is required by signManifest() at line 172
   return !!(
     PASS_TYPE_IDENTIFIER &&
     TEAM_IDENTIFIER &&
     PASS_CERTIFICATE &&
-    PRIVATE_KEY
+    PRIVATE_KEY &&
+    WWDR_CERTIFICATE
   )
 }
