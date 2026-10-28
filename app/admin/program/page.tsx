@@ -7,6 +7,7 @@ import { ProgramLifecycle } from './program-lifecycle'
 import { prisma } from '@/lib/prisma'
 import Link from 'next/link'
 import { Button } from '@/components/ui/button'
+import { normalizeLogoUrl } from '@/lib/utils/logo-url'
 
 export const instant = false
 
@@ -176,7 +177,7 @@ export default async function ProgramPage() {
                   data={{
                     businessName: business.name,
                     businessSlug: business.slug,
-                    logoUrl: business.logoUrl,
+                    logoUrl: normalizeLogoUrl(business.logoUrl, business.id),
                     brandColor: business.brandColor || '#6B7280',
                     programType: activeProgram.programType,
                     goal: activeProgram.pointsRequired,

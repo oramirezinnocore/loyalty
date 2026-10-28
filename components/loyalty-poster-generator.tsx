@@ -90,15 +90,24 @@ export function LoyaltyPosterGenerator({ data }: LoyaltyPosterGeneratorProps) {
 
       if (data.logoUrl) {
         try {
+          console.log('[Poster] Starting logo load:', data.logoUrl)
+
           // Robust logo loading: fetch + blob + objectURL
           // This avoids CORS issues and handles relative URLs correctly
           const logoResponse = await fetch(data.logoUrl)
+          console.log('[Poster] Fetch status:', logoResponse.status, logoResponse.statusText)
 
           if (!logoResponse.ok) {
             throw new Error(`Logo fetch failed: ${logoResponse.status}`)
           }
 
           const logoBlob = await logoResponse.blob()
+          console.log('[Poster] Blob received:', {
+            type: logoBlob.type,
+            size: logoBlob.size,
+            sizeKB: Math.round(logoBlob.size / 1024)
+          })
+
           const logoObjectURL = URL.createObjectURL(logoBlob)
 
           const logo = new Image()
@@ -107,6 +116,13 @@ export function LoyaltyPosterGenerator({ data }: LoyaltyPosterGeneratorProps) {
             logo.onload = resolve
             logo.onerror = reject
             logo.src = logoObjectURL
+          })
+
+          console.log('[Poster] Image loaded:', {
+            width: logo.width,
+            height: logo.height,
+            naturalWidth: logo.naturalWidth,
+            naturalHeight: logo.naturalHeight
           })
 
           const logoSize = 300
@@ -132,13 +148,26 @@ export function LoyaltyPosterGenerator({ data }: LoyaltyPosterGeneratorProps) {
             drawWidth = logoSize * aspectRatio
           }
 
+          const drawX = (width - drawWidth) / 2
+          const drawY = currentY - drawHeight / 2
+
+          console.log('[Poster] Drawing logo:', {
+            x: drawX,
+            y: drawY,
+            width: drawWidth,
+            height: drawHeight,
+            currentY
+          })
+
           ctx.drawImage(
             logo,
-            (width - drawWidth) / 2,
-            currentY - drawHeight / 2,
+            drawX,
+            drawY,
             drawWidth,
             drawHeight
           )
+
+          console.log('[Poster] Logo drawn successfully')
 
           // Clean up object URL
           URL.revokeObjectURL(logoObjectURL)
@@ -146,9 +175,10 @@ export function LoyaltyPosterGenerator({ data }: LoyaltyPosterGeneratorProps) {
           currentY += logoSize / 2 + 100
         } catch (error) {
           // Log error for debugging (development only)
-          console.error('Logo loading failed for poster generation:', {
+          console.error('[Poster] LOGO FAILED:', {
             logoUrl: data.logoUrl,
-            error: error instanceof Error ? error.message : 'Unknown error'
+            error: error instanceof Error ? error.message : 'Unknown error',
+            stack: error instanceof Error ? error.stack : undefined
           })
 
           // Fallback to initial
