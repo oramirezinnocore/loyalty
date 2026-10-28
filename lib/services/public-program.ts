@@ -28,6 +28,8 @@ export interface PublicProgramData {
     name: string
     publicDescription: string | null
     pointsRequired: number
+    programType: string
+    termsAndConditions: string | null
     rewardDefinitions: Array<{
       name: string
       description: string | null
@@ -100,6 +102,8 @@ export async function getPublicBusinessProgramBySlug(
         name: true,
         publicDescription: true,
         pointsRequired: true,
+        programType: true,
+        termsAndConditions: true,
         rewardDefinitions: {
           where: { isActive: true },
           select: {

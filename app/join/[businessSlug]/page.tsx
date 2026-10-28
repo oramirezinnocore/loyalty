@@ -4,18 +4,23 @@ import { useState, useEffect } from 'react'
 import { useRouter, useParams } from 'next/navigation'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
+import { X } from 'lucide-react'
+import { getContrastTextColor } from '@/lib/utils/color'
 
 interface BusinessData {
   business: {
     name: string
     slug: string
     brandColor: string | null
+    logoUrl: string | null
     status: string
   }
   program: {
     name: string
     publicDescription: string | null
     pointsRequired: number
+    programType: string
+    termsAndConditions: string | null
     rewardDefinitions: Array<{
       name: string
       description: string | null
@@ -33,6 +38,7 @@ export default function JoinPage() {
   const [dataError, setDataError] = useState('')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
+  const [showTermsModal, setShowTermsModal] = useState(false)
   const [formData, setFormData] = useState({
     firstName: '',
     lastName: '',
@@ -62,11 +68,25 @@ export default function JoinPage() {
       .finally(() => setLoadingData(false))
   }, [businessSlug])
 
+  // Handle Escape key for modal
+  useEffect(() => {
+    const handleEscape = (e: KeyboardEvent) => {
+      if (e.key === 'Escape' && showTermsModal) {
+        setShowTermsModal(false)
+      }
+    }
+
+    window.addEventListener('keydown', handleEscape)
+    return () => window.removeEventListener('keydown', handleEscape)
+  }, [showTermsModal])
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setError('')
 
-    if (!formData.termsAccepted) {
+    // Only require terms acceptance if terms exist
+    const hasTerms = businessData?.program?.termsAndConditions
+    if (hasTerms && !formData.termsAccepted) {
       setError('Debes aceptar los términos y condiciones')
       return
     }
@@ -135,15 +155,41 @@ export default function JoinPage() {
   // No active program state
   if (!businessData.program) {
     const brandColor = businessData.business.brandColor || '#6B7280'
+    const textColor = getContrastTextColor(brandColor)
+    const logoUrl = businessData.business.logoUrl
 
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
         <Card className="w-full max-w-md">
           <div
-            className="text-white p-6 rounded-t-lg"
-            style={{ background: `linear-gradient(135deg, ${brandColor} 0%, ${brandColor}dd 100%)` }}
+            className="p-8 rounded-t-lg"
+            style={{
+              background: `linear-gradient(135deg, ${brandColor} 0%, ${brandColor}dd 100%)`,
+              color: textColor
+            }}
           >
-            <h1 className="text-2xl font-bold text-center">{businessData.business.name}</h1>
+            <div className="text-center space-y-4">
+              {logoUrl ? (
+                <div className="flex justify-center">
+                  <div className="w-20 h-20 bg-white rounded-lg p-2 flex items-center justify-center">
+                    <img
+                      src={logoUrl}
+                      alt={businessData.business.name}
+                      className="w-full h-full object-contain"
+                    />
+                  </div>
+                </div>
+              ) : (
+                <div className="flex justify-center">
+                  <div className="w-20 h-20 bg-white/20 rounded-lg flex items-center justify-center">
+                    <span className="text-3xl font-bold" style={{ color: textColor }}>
+                      {businessData.business.name.charAt(0).toUpperCase()}
+                    </span>
+                  </div>
+                </div>
+              )}
+              <h1 className="text-2xl font-bold">{businessData.business.name}</h1>
+            </div>
           </div>
           <CardContent className="p-8 text-center">
             <div className="text-5xl mb-4">🎁</div>
@@ -161,24 +207,63 @@ export default function JoinPage() {
 
   // Active program state - show registration form
   const brandColor = businessData.business.brandColor || '#F97316'
+  const textColor = getContrastTextColor(brandColor)
+  const logoUrl = businessData.business.logoUrl
   const reward = businessData.program.rewardDefinitions[0]
-  const programDescription = businessData.program.publicDescription ||
-    `Completa ${businessData.program.pointsRequired} compras y recibe ${reward?.name || 'una recompensa'}`
+  const hasTerms = !!businessData.program.termsAndConditions
+
+  // Generate description based on program type
+  let programDescription = businessData.program.publicDescription
+  if (!programDescription) {
+    const typeLabel =
+      businessData.program.programType === 'VISITS' ? 'visitas' :
+      businessData.program.programType === 'PURCHASES' ? 'compras' :
+      businessData.program.programType === 'STREAK' ? 'días consecutivos' : 'puntos'
+
+    programDescription = `Completa ${businessData.program.pointsRequired} ${typeLabel} y recibe ${reward?.name || 'una recompensa'}`
+  }
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-orange-50 to-white flex items-center justify-center p-4">
-      <Card className="w-full max-w-md">
-        <div
-          className="text-white p-6 rounded-t-lg"
-          style={{ background: `linear-gradient(135deg, ${brandColor} 0%, ${brandColor}dd 100%)` }}
-        >
-          <h1 className="text-2xl font-bold text-center">{businessData.business.name}</h1>
-          <p className="text-center mt-2 opacity-90">
-            {programDescription}
-          </p>
-        </div>
+    <>
+      <div className="min-h-screen bg-gradient-to-b from-gray-50 to-white flex items-center justify-center p-4">
+        <Card className="w-full max-w-md">
+          <div
+            className="p-8 rounded-t-lg"
+            style={{
+              background: `linear-gradient(135deg, ${brandColor} 0%, ${brandColor}dd 100%)`,
+              color: textColor
+            }}
+          >
+            <div className="text-center space-y-4">
+              {logoUrl ? (
+                <div className="flex justify-center">
+                  <div className="w-24 h-24 bg-white rounded-lg p-2 flex items-center justify-center">
+                    <img
+                      src={logoUrl}
+                      alt={businessData.business.name}
+                      className="w-full h-full object-contain"
+                    />
+                  </div>
+                </div>
+              ) : (
+                <div className="flex justify-center">
+                  <div className="w-24 h-24 bg-white/20 rounded-lg flex items-center justify-center">
+                    <span className="text-4xl font-bold" style={{ color: textColor }}>
+                      {businessData.business.name.charAt(0).toUpperCase()}
+                    </span>
+                  </div>
+                </div>
+              )}
+              <div>
+                <h1 className="text-2xl font-bold">{businessData.business.name}</h1>
+                <p className="mt-2 text-sm opacity-90">
+                  {programDescription}
+                </p>
+              </div>
+            </div>
+          </div>
 
-        <CardContent className="p-6">
+          <CardContent className="p-6">
           <div className="mb-6">
             <h2 className="text-xl font-semibold mb-2">¡Únete a nuestro programa!</h2>
             <p className="text-gray-600">
@@ -220,19 +305,28 @@ export default function JoinPage() {
               />
             </div>
 
-            <div className="flex items-start">
-              <input
-                type="checkbox"
-                id="terms"
-                required
-                className="mt-1 mr-2"
-                checked={formData.termsAccepted}
-                onChange={(e) => setFormData({ ...formData, termsAccepted: e.target.checked })}
-              />
-              <label htmlFor="terms" className="text-sm text-gray-600">
-                Acepto los términos y condiciones del programa de lealtad
-              </label>
-            </div>
+            {hasTerms && (
+              <div className="flex items-start">
+                <input
+                  type="checkbox"
+                  id="terms"
+                  required
+                  className="mt-1 mr-2"
+                  checked={formData.termsAccepted}
+                  onChange={(e) => setFormData({ ...formData, termsAccepted: e.target.checked })}
+                />
+                <label htmlFor="terms" className="text-sm text-gray-600">
+                  Acepto los{' '}
+                  <button
+                    type="button"
+                    onClick={() => setShowTermsModal(true)}
+                    className="text-blue-600 hover:underline font-medium"
+                  >
+                    términos y condiciones
+                  </button>
+                </label>
+              </div>
+            )}
 
             {error && (
               <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded">
@@ -245,7 +339,8 @@ export default function JoinPage() {
               disabled={loading}
               className="w-full"
               style={{
-                background: `linear-gradient(135deg, ${brandColor} 0%, ${brandColor}dd 100%)`
+                background: `linear-gradient(135deg, ${brandColor} 0%, ${brandColor}dd 100%)`,
+                color: textColor
               }}
               size="lg"
             >
@@ -255,5 +350,51 @@ export default function JoinPage() {
         </CardContent>
       </Card>
     </div>
+
+    {/* Terms Modal */}
+    {showTermsModal && hasTerms && (
+      <div
+        className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50"
+        onClick={() => setShowTermsModal(false)}
+      >
+        <div
+          className="bg-white rounded-lg max-w-2xl w-full max-h-[80vh] flex flex-col"
+          onClick={(e) => e.stopPropagation()}
+        >
+          {/* Header */}
+          <div className="flex items-center justify-between p-4 border-b">
+            <h2 className="text-lg font-semibold">Términos y condiciones</h2>
+            <button
+              onClick={() => setShowTermsModal(false)}
+              className="p-1 hover:bg-gray-100 rounded-lg transition-colors"
+              aria-label="Cerrar"
+            >
+              <X className="w-5 h-5" />
+            </button>
+          </div>
+
+          {/* Content */}
+          <div className="flex-1 overflow-y-auto p-6">
+            <div className="prose prose-sm max-w-none">
+              <p className="whitespace-pre-wrap text-gray-700">
+                {businessData.program.termsAndConditions}
+              </p>
+            </div>
+          </div>
+
+          {/* Footer */}
+          <div className="p-4 border-t">
+            <Button
+              onClick={() => setShowTermsModal(false)}
+              variant="outline"
+              className="w-full"
+            >
+              Cerrar
+            </Button>
+          </div>
+        </div>
+      </div>
+    )}
+  </>
   )
 }
