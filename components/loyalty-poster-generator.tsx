@@ -88,32 +88,17 @@ export function LoyaltyPosterGenerator({ data }: LoyaltyPosterGeneratorProps) {
       // Logo section
       let currentY = 280
 
-      console.log('[Poster] Logo section START', {
-        currentY,
-        logoUrl: data.logoUrl,
-        hasLogoUrl: !!data.logoUrl
-      })
-
       if (data.logoUrl) {
         try {
-          console.log('[Poster] Entering logo load branch')
-          console.log('[Poster] Starting logo load:', data.logoUrl)
-
           // Robust logo loading: fetch + blob + objectURL
           // This avoids CORS issues and handles relative URLs correctly
           const logoResponse = await fetch(data.logoUrl)
-          console.log('[Poster] Fetch status:', logoResponse.status, logoResponse.statusText)
 
           if (!logoResponse.ok) {
             throw new Error(`Logo fetch failed: ${logoResponse.status}`)
           }
 
           const logoBlob = await logoResponse.blob()
-          console.log('[Poster] Blob received:', {
-            type: logoBlob.type,
-            size: logoBlob.size,
-            sizeKB: Math.round(logoBlob.size / 1024)
-          })
 
           const logoObjectURL = URL.createObjectURL(logoBlob)
 
@@ -134,13 +119,6 @@ export function LoyaltyPosterGenerator({ data }: LoyaltyPosterGeneratorProps) {
               reject(err)
             }
             logo.src = logoObjectURL
-          })
-
-          console.log('[Poster] Image loaded:', {
-            width: logo.width,
-            height: logo.height,
-            naturalWidth: logo.naturalWidth,
-            naturalHeight: logo.naturalHeight
           })
 
           const logoSize = 300
@@ -169,14 +147,6 @@ export function LoyaltyPosterGenerator({ data }: LoyaltyPosterGeneratorProps) {
           const drawX = (width - drawWidth) / 2
           const drawY = currentY - drawHeight / 2
 
-          console.log('[Poster] Drawing logo:', {
-            x: drawX,
-            y: drawY,
-            width: drawWidth,
-            height: drawHeight,
-            currentY
-          })
-
           ctx.drawImage(
             logo,
             drawX,
@@ -185,14 +155,10 @@ export function LoyaltyPosterGenerator({ data }: LoyaltyPosterGeneratorProps) {
             drawHeight
           )
 
-          console.log('[Poster] Logo drawn successfully')
-
           // Clean up object URL
           URL.revokeObjectURL(logoObjectURL)
 
           currentY += logoSize / 2 + 100
-
-          console.log('[Poster] Logo section complete, new currentY:', currentY)
         } catch (error) {
           // Log error for debugging (development only)
           console.error('[Poster] LOGO FAILED:', {
@@ -201,13 +167,15 @@ export function LoyaltyPosterGenerator({ data }: LoyaltyPosterGeneratorProps) {
             stack: error instanceof Error ? error.stack : undefined
           })
 
-          console.log('[Poster] Rendering FALLBACK initial')
-
-          // Fallback to initial
-          ctx.fillStyle = lightBrand
+          // Fallback to initial - white circle with shadow
+          ctx.fillStyle = '#FFFFFF'
+          ctx.shadowColor = 'rgba(0, 0, 0, 0.1)'
+          ctx.shadowBlur = 40
+          ctx.shadowOffsetY = 10
           ctx.beginPath()
           ctx.arc(width / 2, currentY, 150, 0, Math.PI * 2)
           ctx.fill()
+          ctx.shadowBlur = 0
 
           ctx.fillStyle = brandColor
           ctx.font = 'bold 180px sans-serif'
@@ -216,17 +184,18 @@ export function LoyaltyPosterGenerator({ data }: LoyaltyPosterGeneratorProps) {
           ctx.fillText(data.businessName.charAt(0).toUpperCase(), width / 2, currentY)
 
           currentY += 230
-
-          console.log('[Poster] FALLBACK rendered at currentY:', currentY)
         }
       } else {
-        console.log('[Poster] No logoUrl - rendering initial')
 
-        // No logo - show initial
-        ctx.fillStyle = lightBrand
+        // No logo - show initial - white circle with shadow
+        ctx.fillStyle = '#FFFFFF'
+        ctx.shadowColor = 'rgba(0, 0, 0, 0.1)'
+        ctx.shadowBlur = 40
+        ctx.shadowOffsetY = 10
         ctx.beginPath()
         ctx.arc(width / 2, currentY, 150, 0, Math.PI * 2)
         ctx.fill()
+        ctx.shadowBlur = 0
 
         ctx.fillStyle = brandColor
         ctx.font = 'bold 180px sans-serif'
@@ -235,11 +204,7 @@ export function LoyaltyPosterGenerator({ data }: LoyaltyPosterGeneratorProps) {
         ctx.fillText(data.businessName.charAt(0).toUpperCase(), width / 2, currentY)
 
         currentY += 230
-
-        console.log('[Poster] Initial rendered, new currentY:', currentY)
       }
-
-      console.log('[Poster] Logo section END, proceeding to Business Name at currentY:', currentY)
 
       // Business Name
       ctx.fillStyle = brandColor
@@ -364,11 +329,8 @@ export function LoyaltyPosterGenerator({ data }: LoyaltyPosterGeneratorProps) {
       ctx.textAlign = 'center'
       ctx.fillText('Programa de lealtad digital · Powered by IntusPath', width / 2, currentY)
 
-      console.log('[Poster] All rendering complete, calling toBlob()')
-
       // Download
       canvas.toBlob((blob) => {
-        console.log('[Poster] toBlob callback', { blobExists: !!blob, blobSize: blob?.size })
         if (blob) {
           const url = URL.createObjectURL(blob)
           const link = document.createElement('a')

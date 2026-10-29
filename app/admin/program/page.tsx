@@ -3,7 +3,6 @@ import { getSession, getUserBusinesses } from '@/lib/authorization'
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card'
 import { QRGenerator } from '@/components/qr-generator'
 import { LoyaltyPosterGenerator } from '@/components/loyalty-poster-generator'
-import { LoyaltyPosterGeneratorDebug } from '@/components/loyalty-poster-generator-debug'
 import { ProgramLifecycle } from './program-lifecycle'
 import { prisma } from '@/lib/prisma'
 import Link from 'next/link'
@@ -175,20 +174,6 @@ export default async function ProgramPage() {
                 </div>
 
                 <LoyaltyPosterGenerator
-                  data={{
-                    businessName: business.name,
-                    businessSlug: business.slug,
-                    logoUrl: normalizeLogoUrl(business.logoUrl, business.id),
-                    brandColor: business.brandColor || '#6B7280',
-                    programType: activeProgram.programType,
-                    goal: activeProgram.pointsRequired,
-                    rewardName: activeProgram.rewardDefinitions[0]?.name || 'Recompensa especial',
-                    publicDescription: activeProgram.publicDescription,
-                    acquisitionUrl
-                  }}
-                />
-
-                <LoyaltyPosterGeneratorDebug
                   data={{
                     businessName: business.name,
                     businessSlug: business.slug,
