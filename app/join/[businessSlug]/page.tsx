@@ -268,7 +268,7 @@ export default function JoinPage() {
 
           <CardContent className="p-6">
           <div className="mb-6">
-            <h2 className="text-xl font-semibold mb-2">¡Únete a nuestro programa!</h2>
+            <h2 className="text-xl font-semibold mb-2 text-gray-900">¡Únete a nuestro programa!</h2>
             <p className="text-gray-600">
               {programDescription}
             </p>
@@ -276,33 +276,33 @@ export default function JoinPage() {
 
           <form onSubmit={handleSubmit} className="space-y-4">
             <div>
-              <label className="block text-sm font-medium mb-1">Nombre *</label>
+              <label className="block text-sm font-medium mb-1 text-gray-700">Nombre *</label>
               <input
                 type="text"
                 required
-                className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent"
+                className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent text-gray-900 placeholder:text-gray-400"
                 value={formData.firstName}
                 onChange={(e) => setFormData({ ...formData, firstName: e.target.value })}
               />
             </div>
 
             <div>
-              <label className="block text-sm font-medium mb-1">Apellido</label>
+              <label className="block text-sm font-medium mb-1 text-gray-700">Apellido</label>
               <input
                 type="text"
-                className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent"
+                className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent text-gray-900 placeholder:text-gray-400"
                 value={formData.lastName}
                 onChange={(e) => setFormData({ ...formData, lastName: e.target.value })}
               />
             </div>
 
             <div>
-              <label className="block text-sm font-medium mb-1">Teléfono *</label>
+              <label className="block text-sm font-medium mb-1 text-gray-700">Teléfono *</label>
               <input
                 type="tel"
                 required
                 placeholder="+52 55 1234 5678"
-                className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent"
+                className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent text-gray-900 placeholder:text-gray-400"
                 value={formData.phone}
                 onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
               />
