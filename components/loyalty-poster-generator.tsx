@@ -85,128 +85,10 @@ export function LoyaltyPosterGenerator({ data }: LoyaltyPosterGeneratorProps) {
       ctx.arc(width * 0.85, height * 0.35, 140, 0, Math.PI * 2)
       ctx.fill()
 
-      // Logo section
-      let currentY = 280
+      // Start content positioning
+      let currentY = 320
 
-      if (data.logoUrl) {
-        try {
-          // Robust logo loading: fetch + blob + objectURL
-          // This avoids CORS issues and handles relative URLs correctly
-          const logoResponse = await fetch(data.logoUrl)
-
-          if (!logoResponse.ok) {
-            throw new Error(`Logo fetch failed: ${logoResponse.status}`)
-          }
-
-          const logoBlob = await logoResponse.blob()
-
-          const logoObjectURL = URL.createObjectURL(logoBlob)
-
-          const logo = new Image()
-
-          // Add timeout to prevent infinite hang
-          await new Promise((resolve, reject) => {
-            const timeout = setTimeout(() => {
-              reject(new Error('Logo load timeout after 10s'))
-            }, 10000)
-
-            logo.onload = () => {
-              clearTimeout(timeout)
-              resolve(undefined)
-            }
-            logo.onerror = (err) => {
-              clearTimeout(timeout)
-              reject(err)
-            }
-            logo.src = logoObjectURL
-          })
-
-          const logoSize = 300
-
-          // White circle background for logo
-          ctx.fillStyle = '#FFFFFF'
-          ctx.shadowColor = 'rgba(0, 0, 0, 0.1)'
-          ctx.shadowBlur = 40
-          ctx.shadowOffsetY = 10
-          ctx.beginPath()
-          ctx.arc(width / 2, currentY, logoSize / 2 + 30, 0, Math.PI * 2)
-          ctx.fill()
-          ctx.shadowBlur = 0
-
-          // Draw logo (contain - preserve aspect ratio)
-          const aspectRatio = logo.width / logo.height
-          let drawWidth = logoSize
-          let drawHeight = logoSize
-
-          if (aspectRatio > 1) {
-            drawHeight = logoSize / aspectRatio
-          } else {
-            drawWidth = logoSize * aspectRatio
-          }
-
-          const drawX = (width - drawWidth) / 2
-          const drawY = currentY - drawHeight / 2
-
-          ctx.drawImage(
-            logo,
-            drawX,
-            drawY,
-            drawWidth,
-            drawHeight
-          )
-
-          // Clean up object URL
-          URL.revokeObjectURL(logoObjectURL)
-
-          currentY += logoSize / 2 + 100
-        } catch (error) {
-          // Log error for debugging (development only)
-          console.error('[Poster] LOGO FAILED:', {
-            logoUrl: data.logoUrl,
-            error: error instanceof Error ? error.message : 'Unknown error',
-            stack: error instanceof Error ? error.stack : undefined
-          })
-
-          // Fallback to initial - white circle with shadow
-          ctx.fillStyle = '#FFFFFF'
-          ctx.shadowColor = 'rgba(0, 0, 0, 0.1)'
-          ctx.shadowBlur = 40
-          ctx.shadowOffsetY = 10
-          ctx.beginPath()
-          ctx.arc(width / 2, currentY, 150, 0, Math.PI * 2)
-          ctx.fill()
-          ctx.shadowBlur = 0
-
-          ctx.fillStyle = brandColor
-          ctx.font = 'bold 180px sans-serif'
-          ctx.textAlign = 'center'
-          ctx.textBaseline = 'middle'
-          ctx.fillText(data.businessName.charAt(0).toUpperCase(), width / 2, currentY)
-
-          currentY += 230
-        }
-      } else {
-
-        // No logo - show initial - white circle with shadow
-        ctx.fillStyle = '#FFFFFF'
-        ctx.shadowColor = 'rgba(0, 0, 0, 0.1)'
-        ctx.shadowBlur = 40
-        ctx.shadowOffsetY = 10
-        ctx.beginPath()
-        ctx.arc(width / 2, currentY, 150, 0, Math.PI * 2)
-        ctx.fill()
-        ctx.shadowBlur = 0
-
-        ctx.fillStyle = brandColor
-        ctx.font = 'bold 180px sans-serif'
-        ctx.textAlign = 'center'
-        ctx.textBaseline = 'middle'
-        ctx.fillText(data.businessName.charAt(0).toUpperCase(), width / 2, currentY)
-
-        currentY += 230
-      }
-
-      // Business Name
+      // Business Name (main branding)
       ctx.fillStyle = brandColor
       ctx.font = 'bold 140px sans-serif'
       ctx.textAlign = 'center'
@@ -396,7 +278,7 @@ export function LoyaltyPosterGenerator({ data }: LoyaltyPosterGeneratorProps) {
           <div className="flex-1">
             <div className="font-medium">Cartel completo (recomendado)</div>
             <div className="text-sm text-gray-600">
-              Incluye logo, mensaje promocional, beneficio y código QR. Ideal para colocar en tu negocio.
+              Incluye mensaje promocional, beneficio y código QR. Ideal para colocar en tu negocio.
             </div>
           </div>
         </label>
