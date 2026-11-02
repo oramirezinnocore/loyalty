@@ -3,11 +3,17 @@ import * as archiverModule from 'archiver'
 import crypto from 'crypto'
 import { Readable } from 'stream'
 import forge from 'node-forge'
+import { isPasscreatorConfigured } from './passcreator'
 
 // Handle ESM/CJS interop for archiver
 const archiver = (archiverModule as any).default || archiverModule
 
-// Apple Wallet configuration
+// Apple Wallet Provider Mode
+// - native: Use Apple Developer certificates (requires Apple Developer Program)
+// - passcreator: Use Passcreator API for demo/MVP (no Apple Developer required)
+export const APPLE_WALLET_PROVIDER = (process.env.APPLE_WALLET_PROVIDER || 'native') as 'native' | 'passcreator'
+
+// Apple Wallet configuration (native mode)
 const PASS_TYPE_IDENTIFIER = process.env.APPLE_PASS_TYPE_IDENTIFIER || ''
 const TEAM_IDENTIFIER = process.env.APPLE_TEAM_IDENTIFIER || ''
 const PASS_CERTIFICATE = process.env.APPLE_PASS_CERTIFICATE?.replace(/\\n/g, '\n') || ''
@@ -261,6 +267,12 @@ export async function syncMembershipToAppleWallet(membershipToken: string): Prom
 
 // Check if Apple Wallet is configured
 export function isAppleWalletConfigured(): boolean {
+  // Provider mode: passcreator
+  if (APPLE_WALLET_PROVIDER === 'passcreator') {
+    return isPasscreatorConfigured()
+  }
+
+  // Provider mode: native
   if (isMockMode) {
     return true // Available in mock mode
   }
