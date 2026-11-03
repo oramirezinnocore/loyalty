@@ -60,7 +60,7 @@ describe('Apple Wallet Runtime Configuration', () => {
   it('detects Apple Wallet configured in passcreator mode set after import', async () => {
     // Simulate production environment to disable mock mode
     const originalNodeEnv = process.env.NODE_ENV
-    process.env.NODE_ENV = 'production'
+    Object.defineProperty(process.env, 'NODE_ENV', { value: 'production', writable: true })
 
     // Import with NO configuration
     delete process.env.APPLE_WALLET_PROVIDER
@@ -84,7 +84,7 @@ describe('Apple Wallet Runtime Configuration', () => {
     expect(isAppleWalletConfigured()).toBe(true)
 
     // Restore NODE_ENV
-    process.env.NODE_ENV = originalNodeEnv
+    Object.defineProperty(process.env, 'NODE_ENV', { value: originalNodeEnv, writable: true })
   })
 })
 
@@ -142,7 +142,7 @@ describe('Wallet Capabilities Endpoint Integration', () => {
   it('capabilities endpoint reflects runtime configuration', async () => {
     // Simulate Docker production scenario: production environment
     const originalNodeEnv = process.env.NODE_ENV
-    process.env.NODE_ENV = 'production'
+    Object.defineProperty(process.env, 'NODE_ENV', { value: 'production', writable: true })
 
     // Simulate Docker production scenario:
     // 1. Module imported with NO environment variables (during build)
@@ -177,6 +177,6 @@ describe('Wallet Capabilities Endpoint Integration', () => {
     expect(appleWallet.isAppleWalletConfigured()).toBe(true)
 
     // Restore NODE_ENV
-    process.env.NODE_ENV = originalNodeEnv
+    Object.defineProperty(process.env, 'NODE_ENV', { value: originalNodeEnv, writable: true })
   })
 })
