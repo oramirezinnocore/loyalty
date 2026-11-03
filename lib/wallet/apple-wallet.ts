@@ -11,20 +11,55 @@ const archiver = (archiverModule as any).default || archiverModule
 // Apple Wallet Provider Mode
 // - native: Use Apple Developer certificates (requires Apple Developer Program)
 // - passcreator: Use Passcreator API for demo/MVP (no Apple Developer required)
-export const APPLE_WALLET_PROVIDER = (process.env.APPLE_WALLET_PROVIDER || 'native') as 'native' | 'passcreator'
+// READ AT RUNTIME - not at build time
+export function getAppleWalletProvider(): 'native' | 'passcreator' {
+  return (process.env.APPLE_WALLET_PROVIDER || 'native') as 'native' | 'passcreator'
+}
 
-// Apple Wallet configuration (native mode)
-const PASS_TYPE_IDENTIFIER = process.env.APPLE_PASS_TYPE_IDENTIFIER || ''
-const TEAM_IDENTIFIER = process.env.APPLE_TEAM_IDENTIFIER || ''
-const PASS_CERTIFICATE = process.env.APPLE_PASS_CERTIFICATE?.replace(/\\n/g, '\n') || ''
-const PRIVATE_KEY = process.env.APPLE_PASS_PRIVATE_KEY?.replace(/\\n/g, '\n') || ''
-const WWDR_CERTIFICATE = process.env.APPLE_WWDR_CERTIFICATE?.replace(/\\n/g, '\n') || ''
+// Apple Wallet configuration (native mode) - READ AT RUNTIME
+function getPassTypeIdentifier(): string {
+  return process.env.APPLE_PASS_TYPE_IDENTIFIER || ''
+}
 
-// Mock mode: explicit mock value OR (development/test AND no real certificates)
-const isMockMode =
-  process.env.APPLE_PASS_CERTIFICATE === 'MOCK_CERTIFICATE' ||
-  (process.env.NODE_ENV !== 'production' &&
-   (!PASS_CERTIFICATE || !PRIVATE_KEY || !WWDR_CERTIFICATE))
+function getTeamIdentifier(): string {
+  return process.env.APPLE_TEAM_IDENTIFIER || ''
+}
+
+function getPassCertificate(): string {
+  return process.env.APPLE_PASS_CERTIFICATE?.replace(/\\n/g, '\n') || ''
+}
+
+function getPrivateKey(): string {
+  return process.env.APPLE_PASS_PRIVATE_KEY?.replace(/\\n/g, '\n') || ''
+}
+
+function getWwdrCertificate(): string {
+  return process.env.APPLE_WWDR_CERTIFICATE?.replace(/\\n/g, '\n') || ''
+}
+
+// Mock mode: explicit mock value OR (development/test AND NO certificates set)
+function isMockMode(): boolean {
+  const PASS_CERTIFICATE = getPassCertificate()
+  const PRIVATE_KEY = getPrivateKey()
+  const WWDR_CERTIFICATE = getWwdrCertificate()
+  const PASS_TYPE_IDENTIFIER = getPassTypeIdentifier()
+  const TEAM_IDENTIFIER = getTeamIdentifier()
+
+  // Explicit mock mode
+  if (process.env.APPLE_PASS_CERTIFICATE === 'MOCK_CERTIFICATE') {
+    return true
+  }
+
+  // In non-production, enable mock mode ONLY if NO certificates are configured at all
+  // (not if only some are configured - that's a misconfiguration, not mock mode)
+  if (process.env.NODE_ENV !== 'production') {
+    const noCertsConfigured = !PASS_TYPE_IDENTIFIER && !TEAM_IDENTIFIER &&
+                               !PASS_CERTIFICATE && !PRIVATE_KEY && !WWDR_CERTIFICATE
+    return noCertsConfigured
+  }
+
+  return false
+}
 
 // Generate deterministic serial number from membership token
 export function generateSerialNumber(membershipToken: string): string {
@@ -82,9 +117,9 @@ export async function generatePassData(membershipToken: string) {
 
   const passData = {
     formatVersion: 1,
-    passTypeIdentifier: PASS_TYPE_IDENTIFIER,
+    passTypeIdentifier: getPassTypeIdentifier(),
     serialNumber,
-    teamIdentifier: TEAM_IDENTIFIER,
+    teamIdentifier: getTeamIdentifier(),
     organizationName: 'IntusPath',
     description: program.name,
     logoText: business.name,
@@ -159,12 +194,16 @@ function createManifest(files: { [key: string]: Buffer }): string {
 
 // Sign manifest with PKCS#7 (required by Apple Wallet)
 function signManifest(manifest: string): Buffer {
+  const PASS_CERTIFICATE = getPassCertificate()
+  const PRIVATE_KEY = getPrivateKey()
+  const WWDR_CERTIFICATE = getWwdrCertificate()
+
   // Production: Require proper certificates
   if (process.env.NODE_ENV === 'production' && (!PASS_CERTIFICATE || !PRIVATE_KEY || !WWDR_CERTIFICATE)) {
     throw new Error('Apple Wallet certificates not configured for production')
   }
 
-  if (isMockMode) {
+  if (isMockMode()) {
     // Return mock signature for development/testing only
     if (process.env.NODE_ENV !== 'test') {
       console.warn('Apple Wallet: Using mock signature (development only)')
@@ -268,17 +307,27 @@ export async function syncMembershipToAppleWallet(membershipToken: string): Prom
 // Check if Apple Wallet is configured
 export function isAppleWalletConfigured(): boolean {
   // Provider mode: passcreator
-  if (APPLE_WALLET_PROVIDER === 'passcreator') {
+  if (getAppleWalletProvider() === 'passcreator') {
     return isPasscreatorConfigured()
   }
 
   // Provider mode: native
-  if (isMockMode) {
-    return true // Available in mock mode
+  // Explicit mock mode (MOCK_CERTIFICATE) counts as configured for development
+  if (process.env.APPLE_PASS_CERTIFICATE === 'MOCK_CERTIFICATE') {
+    return true
   }
 
+  // Auto-mock mode (no certificates in non-production) does NOT count as configured
+  // Only report as configured if real certificates are present
+
   // CRITICAL: Must validate ALL certificates required for PKCS#7 signing
-  // WWDR_CERTIFICATE is required by signManifest() at line 172
+  // WWDR_CERTIFICATE is required by signManifest()
+  const PASS_TYPE_IDENTIFIER = getPassTypeIdentifier()
+  const TEAM_IDENTIFIER = getTeamIdentifier()
+  const PASS_CERTIFICATE = getPassCertificate()
+  const PRIVATE_KEY = getPrivateKey()
+  const WWDR_CERTIFICATE = getWwdrCertificate()
+
   return !!(
     PASS_TYPE_IDENTIFIER &&
     TEAM_IDENTIFIER &&

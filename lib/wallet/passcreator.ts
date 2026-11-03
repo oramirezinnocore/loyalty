@@ -10,8 +10,15 @@
 import { prisma } from '@/lib/prisma'
 
 const PASSCREATOR_API_BASE = 'https://app.passcreator.com/api/v3'
-const API_KEY = process.env.PASSCREATOR_API_KEY || ''
-const TEMPLATE_ID = process.env.PASSCREATOR_TEMPLATE_ID || ''
+
+// Read configuration at runtime - NOT at build time
+function getPasscreatorApiKey(): string {
+  return process.env.PASSCREATOR_API_KEY || ''
+}
+
+function getPasscreatorTemplateId(): string {
+  return process.env.PASSCREATOR_TEMPLATE_ID || ''
+}
 
 interface PasscreatorResponse {
   success: boolean
@@ -31,6 +38,8 @@ interface PasscreatorResponse {
  * Check if Passcreator is properly configured
  */
 export function isPasscreatorConfigured(): boolean {
+  const API_KEY = getPasscreatorApiKey()
+  const TEMPLATE_ID = getPasscreatorTemplateId()
   return !!(API_KEY && TEMPLATE_ID && API_KEY !== 'DEMO_API_KEY')
 }
 
@@ -39,6 +48,9 @@ export function isPasscreatorConfigured(): boolean {
  * Uses membershipToken as userProvidedId for idempotency
  */
 export async function createOrUpdatePass(membershipToken: string): Promise<string> {
+  const API_KEY = getPasscreatorApiKey()
+  const TEMPLATE_ID = getPasscreatorTemplateId()
+
   // Fetch membership with all required data
   const membership = await prisma.membership.findUnique({
     where: { publicToken: membershipToken },
@@ -156,6 +168,8 @@ async function updatePass(
   business: any,
   program: any
 ): Promise<string> {
+  const API_KEY = getPasscreatorApiKey()
+
   const payload = {
     data: {
       storedValue: membership.currentPoints,

@@ -57,15 +57,15 @@ describe('Apple Wallet Provider Mode', () => {
   it('uses native provider by default', async () => {
     delete process.env.APPLE_WALLET_PROVIDER
 
-    const { APPLE_WALLET_PROVIDER } = await import('@/lib/wallet/apple-wallet')
-    expect(APPLE_WALLET_PROVIDER).toBe('native')
+    const { getAppleWalletProvider } = await import('@/lib/wallet/apple-wallet')
+    expect(getAppleWalletProvider()).toBe('native')
   })
 
   it('uses passcreator provider when configured', async () => {
     process.env.APPLE_WALLET_PROVIDER = 'passcreator'
 
-    const { APPLE_WALLET_PROVIDER } = await import('@/lib/wallet/apple-wallet')
-    expect(APPLE_WALLET_PROVIDER).toBe('passcreator')
+    const { getAppleWalletProvider } = await import('@/lib/wallet/apple-wallet')
+    expect(getAppleWalletProvider()).toBe('passcreator')
   })
 
   it('reports Apple Wallet configured when using passcreator mode with valid config', async () => {

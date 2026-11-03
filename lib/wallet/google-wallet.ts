@@ -2,75 +2,103 @@ import { google } from 'googleapis'
 import jwt from 'jsonwebtoken'
 import { prisma } from '@/lib/prisma'
 
-const isMockMode = process.env.GOOGLE_WALLET_PRIVATE_KEY === 'MOCK_PRIVATE_KEY'
+// Read configuration at runtime - NOT at build time
+function getIssuerId(): string {
+  return process.env.GOOGLE_WALLET_ISSUER_ID || ''
+}
 
-// Google Wallet configuration
-const ISSUER_ID = process.env.GOOGLE_WALLET_ISSUER_ID || ''
-const SERVICE_ACCOUNT_EMAIL = process.env.GOOGLE_WALLET_SERVICE_ACCOUNT_EMAIL || ''
-const PRIVATE_KEY = process.env.GOOGLE_WALLET_PRIVATE_KEY?.replace(/\\n/g, '\n') || ''
+function getServiceAccountEmail(): string {
+  return process.env.GOOGLE_WALLET_SERVICE_ACCOUNT_EMAIL || ''
+}
+
+function getPrivateKey(): string {
+  return process.env.GOOGLE_WALLET_PRIVATE_KEY?.replace(/\\n/g, '\n') || ''
+}
+
+function isMockMode(): boolean {
+  return process.env.GOOGLE_WALLET_PRIVATE_KEY === 'MOCK_PRIVATE_KEY'
+}
 
 // Deterministic class/object IDs for multi-tenant
 export function generateClassId(businessId: string): string {
   // Create deterministic but non-sequential class ID
   // Format: issuerId.businessSlug_loyalty_class
-  return `${ISSUER_ID}.${businessId}_loyalty_class`
+  return `${getIssuerId()}.${businessId}_loyalty_class`
 }
 
 export function generateObjectId(membershipToken: string): string {
   // Create deterministic object ID from secure membership token
-  return `${ISSUER_ID}.${membershipToken}`
+  return `${getIssuerId()}.${membershipToken}`
 }
 
-// Mock Google Wallet API
+// Mock Google Wallet API - matches googleapis structure
 class MockGoogleWallet {
-  async createClass(classData: any) {
-    return {
-      id: classData.id,
-      classTemplateInfo: classData.classTemplateInfo,
-      heroImage: classData.heroImage,
-      programName: classData.programName
+  loyaltyclass = {
+    insert: async ({ requestBody }: any) => ({
+      data: {
+        id: requestBody.id,
+        classTemplateInfo: requestBody.classTemplateInfo,
+        heroImage: requestBody.heroImage,
+        programName: requestBody.programName
+      }
+    }),
+    update: async ({ resourceId, requestBody }: any) => ({
+      data: {
+        id: resourceId,
+        ...requestBody
+      }
+    }),
+    get: async ({ resourceId }: any) => {
+      // Simulate 404 for non-existent class
+      throw { code: 404, message: 'Not found' }
     }
   }
 
-  async getClass(classId: string) {
-    return {
-      id: classId,
-      classTemplateInfo: { cardTemplateOverride: { cardRowTemplateInfos: [] } }
-    }
-  }
-
-  async createObject(objectData: any) {
-    return {
-      id: objectData.id,
-      classId: objectData.classId,
-      state: 'ACTIVE',
-      barcode: objectData.barcode,
-      accountName: objectData.accountName
-    }
-  }
-
-  async updateObject(objectId: string, objectData: any) {
-    return {
-      id: objectId,
-      ...objectData,
-      state: 'ACTIVE'
-    }
-  }
-
-  async getObject(objectId: string) {
-    return {
-      id: objectId,
-      state: 'ACTIVE'
+  loyaltyobject = {
+    insert: async ({ requestBody }: any) => ({
+      data: {
+        id: requestBody.id,
+        classId: requestBody.classId,
+        state: 'ACTIVE',
+        barcode: requestBody.barcode,
+        accountName: requestBody.accountName
+      }
+    }),
+    update: async ({ resourceId, requestBody }: any) => {
+      // Simulate 404 for first call (forces insert path)
+      throw { code: 404, message: 'Not found' }
     }
   }
 }
 
 const mockWallet = new MockGoogleWallet()
 
-// Initialize Google API client
+// Lazy initialization for Google API client - initialized at RUNTIME when first accessed
 let walletClient: any = null
 
-if (!isMockMode && PRIVATE_KEY && SERVICE_ACCOUNT_EMAIL) {
+function getWalletClient(): any {
+  // Return mock in mock mode
+  if (isMockMode()) {
+    return mockWallet
+  }
+
+  // Return cached client if already initialized
+  if (walletClient) {
+    return walletClient
+  }
+
+  // Initialize client at runtime
+  const PRIVATE_KEY = getPrivateKey()
+  const SERVICE_ACCOUNT_EMAIL = getServiceAccountEmail()
+
+  // If credentials not available and not in production, return mock for testing
+  if (!PRIVATE_KEY || !SERVICE_ACCOUNT_EMAIL) {
+    if (process.env.NODE_ENV !== 'production') {
+      return mockWallet
+    }
+    throw new Error('Google Wallet credentials not configured')
+  }
+
   try {
     const credentials = {
       type: 'service_account',
@@ -87,8 +115,11 @@ if (!isMockMode && PRIVATE_KEY && SERVICE_ACCOUNT_EMAIL) {
       version: 'v1',
       auth
     })
+
+    return walletClient
   } catch (error) {
     console.error('Google Wallet client initialization error:', error)
+    throw new Error('Failed to initialize Google Wallet client')
   }
 }
 
@@ -131,15 +162,13 @@ export async function ensureLoyaltyClass(businessId: string) {
     reviewStatus: 'UNDER_REVIEW'
   }
 
-  if (isMockMode || !walletClient) {
-    return await mockWallet.createClass(classData)
-  }
+  const client = getWalletClient()
 
   try {
     // Try to get existing class
-    await walletClient.loyaltyclass.get({ resourceId: classId })
+    await client.loyaltyclass.get({ resourceId: classId })
     // Update if exists
-    const response = await walletClient.loyaltyclass.update({
+    const response = await client.loyaltyclass.update({
       resourceId: classId,
       requestBody: classData
     })
@@ -147,7 +176,7 @@ export async function ensureLoyaltyClass(businessId: string) {
   } catch (error: any) {
     if (error.code === 404) {
       // Create if doesn't exist
-      const response = await walletClient.loyaltyclass.insert({
+      const response = await client.loyaltyclass.insert({
         requestBody: classData
       })
       return response.data
@@ -230,13 +259,11 @@ export async function createOrUpdateLoyaltyObject(membershipToken: string) {
     ]
   }
 
-  if (isMockMode || !walletClient) {
-    return await mockWallet.createObject(objectData)
-  }
+  const client = getWalletClient()
 
   try {
     // Try to update existing
-    const response = await walletClient.loyaltyobject.update({
+    const response = await client.loyaltyobject.update({
       resourceId: objectId,
       requestBody: objectData
     })
@@ -244,7 +271,7 @@ export async function createOrUpdateLoyaltyObject(membershipToken: string) {
   } catch (error: any) {
     if (error.code === 404) {
       // Create if doesn't exist
-      const response = await walletClient.loyaltyobject.insert({
+      const response = await client.loyaltyobject.insert({
         requestBody: objectData
       })
       return response.data
@@ -257,8 +284,11 @@ export async function createOrUpdateLoyaltyObject(membershipToken: string) {
 export function generateSaveUrl(membershipToken: string): string {
   const objectId = generateObjectId(membershipToken)
 
+  const PRIVATE_KEY = getPrivateKey()
+  const SERVICE_ACCOUNT_EMAIL = getServiceAccountEmail()
+
   // Always use mock mode if private key is not properly configured
-  if (isMockMode || !PRIVATE_KEY || PRIVATE_KEY === 'MOCK_PRIVATE_KEY') {
+  if (isMockMode() || !PRIVATE_KEY || PRIVATE_KEY === 'MOCK_PRIVATE_KEY') {
     // Generate a mock JWT for development
     const token = `mock_jwt_${objectId.replace(/\./g, '_')}`
     return `https://pay.google.com/gp/v/save/${token}`
@@ -297,9 +327,13 @@ export async function syncMembershipToWallet(membershipToken: string): Promise<b
 
 // Check if Google Wallet is configured
 export function isGoogleWalletConfigured(): boolean {
-  if (isMockMode) {
+  if (isMockMode()) {
     return true // Available in mock mode for development
   }
 
-  return !!(ISSUER_ID && SERVICE_ACCOUNT_EMAIL && PRIVATE_KEY && walletClient)
+  const ISSUER_ID = getIssuerId()
+  const SERVICE_ACCOUNT_EMAIL = getServiceAccountEmail()
+  const PRIVATE_KEY = getPrivateKey()
+
+  return !!(ISSUER_ID && SERVICE_ACCOUNT_EMAIL && PRIVATE_KEY)
 }

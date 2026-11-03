@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { generatePkPass, isAppleWalletConfigured, APPLE_WALLET_PROVIDER } from '@/lib/wallet/apple-wallet'
+import { generatePkPass, isAppleWalletConfigured, getAppleWalletProvider } from '@/lib/wallet/apple-wallet'
 import { createOrUpdatePass } from '@/lib/wallet/passcreator'
 import { prisma } from '@/lib/prisma'
 import { canPerformLoyaltyOperations } from '@/lib/billing-enforcement'
@@ -55,7 +55,7 @@ export async function GET(
     }
 
     // Provider mode: passcreator
-    if (APPLE_WALLET_PROVIDER === 'passcreator') {
+    if (getAppleWalletProvider() === 'passcreator') {
       // Get iPhoneUri from Passcreator and redirect to .pkpass download
       const iPhoneUri = await createOrUpdatePass(membershipToken)
 
