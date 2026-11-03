@@ -14,6 +14,7 @@ export default function ScannerPage() {
   const [cameraActive, setCameraActive] = useState(false)
   const [cameraError, setCameraError] = useState('')
   const html5QrCodeRef = useRef<Html5Qrcode | null>(null)
+  const isInitializingRef = useRef(false)
   const qrCodeRegionId = 'qr-reader'
 
   useEffect(() => {
@@ -44,19 +45,94 @@ export default function ScannerPage() {
       }
       html5QrCodeRef.current = null
     }
+    isInitializingRef.current = false
     setCameraActive(false)
   }
 
   const startCamera = async () => {
+    // Prevent double initialization
+    if (isInitializingRef.current) {
+      console.log('Camera initialization already in progress')
+      return
+    }
+
+    isInitializingRef.current = true
     setCameraError('')
     setError('')
 
     try {
+      // Verify DOM element exists and is ready
+      const element = document.getElementById(qrCodeRegionId)
+      if (!element) {
+        throw new Error('Camera container element not found. Please refresh the page.')
+      }
+
       // Initialize Html5Qrcode instance
       const html5QrCode = new Html5Qrcode(qrCodeRegionId)
       html5QrCodeRef.current = html5QrCode
 
-      // Check for camera support
+      // Detect iOS Safari
+      const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent)
+      const isSafari = /^((?!chrome|android).)*safari/i.test(navigator.userAgent)
+
+      // iOS Safari: Use facingMode instead of deviceId
+      // This is more reliable on iOS devices
+      if (isIOS || isSafari) {
+        console.log('iOS/Safari detected, using facingMode constraint')
+
+        try {
+          await html5QrCode.start(
+            { facingMode: "environment" }, // Rear camera
+            {
+              fps: 10,
+              qrbox: { width: 250, height: 250 },
+              aspectRatio: 1.0
+            },
+            (decodedText) => {
+              onQRCodeScanned(decodedText)
+            },
+            (errorMessage) => {
+              // QR scan error (expected during normal scanning)
+              // Don't show these errors to user
+            }
+          )
+
+          setCameraActive(true)
+          isInitializingRef.current = false
+          return
+        } catch (facingModeError: any) {
+          console.warn('facingMode failed, trying fallback:', facingModeError.name, facingModeError.message)
+
+          // Fallback: try with "user" (front camera) if environment fails
+          try {
+            await html5QrCode.start(
+              { facingMode: "user" }, // Front camera
+              {
+                fps: 10,
+                qrbox: { width: 250, height: 250 },
+                aspectRatio: 1.0
+              },
+              (decodedText) => {
+                onQRCodeScanned(decodedText)
+              },
+              (errorMessage) => {
+                // QR scan error (expected during normal scanning)
+              }
+            )
+
+            setCameraActive(true)
+            isInitializingRef.current = false
+            return
+          } catch (userFacingError: any) {
+            console.error('Both facingMode attempts failed:', userFacingError)
+            throw facingModeError // Throw original error for proper handling
+          }
+        }
+      }
+
+      // Desktop/Android: Use deviceId approach
+      console.log('Desktop/Android detected, using deviceId approach')
+
       const devices = await Html5Qrcode.getCameras()
       if (!devices || devices.length === 0) {
         throw new Error('No se detectó ninguna cámara en este dispositivo')
@@ -73,7 +149,7 @@ export default function ScannerPage() {
         cameraId = rearCamera.id
       }
 
-      // Start scanning
+      // Start scanning with deviceId
       await html5QrCode.start(
         cameraId,
         {
@@ -82,27 +158,44 @@ export default function ScannerPage() {
           aspectRatio: 1.0
         },
         (decodedText) => {
-          // QR detected - stop scanning and lookup customer
           onQRCodeScanned(decodedText)
         },
         (errorMessage) => {
           // QR scan error (expected during normal scanning)
-          // Don't show these errors to user
         }
       )
 
       setCameraActive(true)
+      isInitializingRef.current = false
     } catch (err: any) {
-      console.error('Camera error:', err)
+      isInitializingRef.current = false
 
+      // Log full error for debugging
+      console.error('Camera initialization error:', {
+        name: err.name,
+        message: err.message,
+        stack: err.stack,
+        constraint: err.constraint
+      })
+
+      // User-friendly error messages based on error type
       if (err.name === 'NotAllowedError' || err.message?.includes('Permission')) {
         setCameraError('Permiso de cámara denegado. Por favor, permite el acceso a la cámara en la configuración de tu navegador.')
-      } else if (err.message?.includes('NotFoundError') || err.message?.includes('cámara')) {
-        setCameraError(err.message)
+      } else if (err.name === 'NotFoundError' || err.message?.includes('No se detectó')) {
+        setCameraError('No se detectó ninguna cámara en este dispositivo. Usa el ingreso manual.')
+      } else if (err.name === 'NotReadableError') {
+        setCameraError('La cámara está siendo usada por otra aplicación. Cierra otras aplicaciones y vuelve a intentar.')
+      } else if (err.name === 'OverconstrainedError') {
+        setCameraError('La cámara no soporta la configuración requerida. Intenta con otro dispositivo o usa el ingreso manual.')
       } else if (err.name === 'NotSupportedError') {
         setCameraError('Tu navegador no soporta acceso a la cámara. Usa el ingreso manual.')
+      } else if (err.name === 'SecurityError') {
+        setCameraError('Acceso a la cámara bloqueado por seguridad. Verifica que estés usando HTTPS.')
+      } else if (err.message?.includes('container element')) {
+        setCameraError(err.message)
       } else {
-        setCameraError('Error al activar la cámara. Usa el ingreso manual como alternativa.')
+        // Generic error with technical details for reporting
+        setCameraError(`Error al activar la cámara (${err.name || 'Error'}). Usa el ingreso manual como alternativa.`)
       }
 
       await stopCamera()
@@ -264,7 +357,8 @@ export default function ScannerPage() {
 
                 {cameraError && (
                   <div className="bg-yellow-50 border border-yellow-200 text-yellow-800 px-4 py-3 rounded mt-4">
-                    {cameraError}
+                    <p className="font-semibold">Error de cámara:</p>
+                    <p className="text-sm mt-1">{cameraError}</p>
                   </div>
                 )}
               </div>
