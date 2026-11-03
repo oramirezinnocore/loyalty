@@ -1,26 +1,144 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
+import { Html5Qrcode } from 'html5-qrcode'
 
 export default function ScannerPage() {
   const [businessId, setBusinessId] = useState('')
-  const [scanning, setScanning] = useState(false)
   const [manualToken, setManualToken] = useState('')
   const [membership, setMembership] = useState<any>(null)
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
+  const [cameraActive, setCameraActive] = useState(false)
+  const [cameraError, setCameraError] = useState('')
+  const html5QrCodeRef = useRef<Html5Qrcode | null>(null)
+  const qrCodeRegionId = 'qr-reader'
 
   useEffect(() => {
     // Get business ID from session/context
-    // For now, hardcode Cono Churro for demo
     fetch('/api/business').then(res => res.json()).then(data => {
       if (data.businesses && data.businesses.length > 0) {
         setBusinessId(data.businesses[0].id)
       }
     })
   }, [])
+
+  // Cleanup camera on unmount or navigation
+  useEffect(() => {
+    return () => {
+      stopCamera()
+    }
+  }, [])
+
+  const stopCamera = async () => {
+    if (html5QrCodeRef.current) {
+      try {
+        if (html5QrCodeRef.current.isScanning) {
+          await html5QrCodeRef.current.stop()
+        }
+        html5QrCodeRef.current.clear()
+      } catch (err) {
+        console.error('Error stopping camera:', err)
+      }
+      html5QrCodeRef.current = null
+    }
+    setCameraActive(false)
+  }
+
+  const startCamera = async () => {
+    setCameraError('')
+    setError('')
+
+    try {
+      // Initialize Html5Qrcode instance
+      const html5QrCode = new Html5Qrcode(qrCodeRegionId)
+      html5QrCodeRef.current = html5QrCode
+
+      // Check for camera support
+      const devices = await Html5Qrcode.getCameras()
+      if (!devices || devices.length === 0) {
+        throw new Error('No se detectó ninguna cámara en este dispositivo')
+      }
+
+      // Prefer rear camera on mobile devices
+      let cameraId = devices[0].id
+      const rearCamera = devices.find(device =>
+        device.label.toLowerCase().includes('back') ||
+        device.label.toLowerCase().includes('rear') ||
+        device.label.toLowerCase().includes('trasera')
+      )
+      if (rearCamera) {
+        cameraId = rearCamera.id
+      }
+
+      // Start scanning
+      await html5QrCode.start(
+        cameraId,
+        {
+          fps: 10,
+          qrbox: { width: 250, height: 250 },
+          aspectRatio: 1.0
+        },
+        (decodedText) => {
+          // QR detected - stop scanning and lookup customer
+          onQRCodeScanned(decodedText)
+        },
+        (errorMessage) => {
+          // QR scan error (expected during normal scanning)
+          // Don't show these errors to user
+        }
+      )
+
+      setCameraActive(true)
+    } catch (err: any) {
+      console.error('Camera error:', err)
+
+      if (err.name === 'NotAllowedError' || err.message?.includes('Permission')) {
+        setCameraError('Permiso de cámara denegado. Por favor, permite el acceso a la cámara en la configuración de tu navegador.')
+      } else if (err.message?.includes('NotFoundError') || err.message?.includes('cámara')) {
+        setCameraError(err.message)
+      } else if (err.name === 'NotSupportedError') {
+        setCameraError('Tu navegador no soporta acceso a la cámara. Usa el ingreso manual.')
+      } else {
+        setCameraError('Error al activar la cámara. Usa el ingreso manual como alternativa.')
+      }
+
+      await stopCamera()
+    }
+  }
+
+  const onQRCodeScanned = async (decodedText: string) => {
+    // Stop camera immediately to prevent duplicate scans
+    await stopCamera()
+
+    // Extract token from QR code
+    // QR codes contain the full URL or just the token
+    let token = decodedText
+
+    // Handle full URL format (from wallet pages)
+    if (decodedText.includes('/wallet/')) {
+      const parts = decodedText.split('/wallet/')
+      if (parts.length > 1) {
+        token = parts[1].split('?')[0].split('#')[0]
+      }
+    }
+
+    // Handle other URL formats
+    if (token.includes('://')) {
+      const url = new URL(token)
+      const pathParts = url.pathname.split('/')
+      token = pathParts[pathParts.length - 1]
+    }
+
+    // Validate token format (should be a CUID)
+    if (token && token.length >= 20) {
+      await lookupCustomer(token)
+    } else {
+      setError('Código QR inválido. Intenta nuevamente.')
+    }
+  }
 
   const lookupCustomer = async (token: string) => {
     setLoading(true)
@@ -83,6 +201,14 @@ export default function ScannerPage() {
     }
   }
 
+  const resetScanner = () => {
+    setMembership(null)
+    setManualToken('')
+    setError('')
+    setCameraError('')
+    stopCamera()
+  }
+
   return (
     <div className="min-h-screen bg-gray-50">
       <div className="bg-white border-b">
@@ -100,40 +226,90 @@ export default function ScannerPage() {
                   Escanea el código QR del cliente
                 </h2>
                 <p className="text-gray-600">
-                  O ingresa el código manualmente para desarrollo
+                  Usa la cámara o ingresa el código manualmente
                 </p>
               </div>
 
-              {/* Manual Entry for Development */}
-              <div className="space-y-4">
-                <div>
-                  <label className="block text-sm font-medium mb-1">
-                    Código de cliente
-                  </label>
-                  <input
-                    type="text"
-                    className="w-full px-3 py-2 border rounded-lg"
-                    placeholder="Ingresa el token del cliente"
-                    value={manualToken}
-                    onChange={(e) => setManualToken(e.target.value)}
-                  />
-                </div>
+              {/* QR Scanner */}
+              <div className="mb-6">
+                {!cameraActive ? (
+                  <Button
+                    onClick={startCamera}
+                    disabled={loading}
+                    className="w-full mb-4"
+                    size="lg"
+                    variant="default"
+                  >
+                    📷 Activar cámara
+                  </Button>
+                ) : (
+                  <div className="space-y-4">
+                    <div
+                      id={qrCodeRegionId}
+                      className="mx-auto border-2 border-blue-500 rounded-lg overflow-hidden"
+                      style={{ maxWidth: '500px' }}
+                    />
+                    <Button
+                      onClick={stopCamera}
+                      variant="outline"
+                      className="w-full"
+                    >
+                      Cerrar cámara
+                    </Button>
+                    <p className="text-sm text-center text-gray-600">
+                      Apunta la cámara al código QR del cliente
+                    </p>
+                  </div>
+                )}
 
-                <Button
-                  onClick={() => lookupCustomer(manualToken)}
-                  disabled={!manualToken || loading}
-                  className="w-full"
-                  size="lg"
-                >
-                  {loading ? 'Buscando...' : 'Buscar cliente'}
-                </Button>
-
-                {error && (
-                  <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded">
-                    {error}
+                {cameraError && (
+                  <div className="bg-yellow-50 border border-yellow-200 text-yellow-800 px-4 py-3 rounded mt-4">
+                    {cameraError}
                   </div>
                 )}
               </div>
+
+              {/* Manual Entry */}
+              {!cameraActive && (
+                <div className="space-y-4">
+                  <div className="relative">
+                    <div className="absolute inset-0 flex items-center">
+                      <div className="w-full border-t border-gray-300" />
+                    </div>
+                    <div className="relative flex justify-center text-sm">
+                      <span className="px-2 bg-white text-gray-500">O ingresa el código manualmente</span>
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium mb-1">
+                      Código de cliente
+                    </label>
+                    <input
+                      type="text"
+                      className="w-full px-3 py-2 border rounded-lg"
+                      placeholder="Ingresa el token del cliente"
+                      value={manualToken}
+                      onChange={(e) => setManualToken(e.target.value)}
+                    />
+                  </div>
+
+                  <Button
+                    onClick={() => lookupCustomer(manualToken)}
+                    disabled={!manualToken || loading}
+                    className="w-full"
+                    size="lg"
+                  >
+                    {loading ? 'Buscando...' : 'Buscar cliente'}
+                  </Button>
+
+                  {error && (
+                    <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded">
+                      {error}
+                    </div>
+                  )}
+                </div>
+              )}
             </CardContent>
           </Card>
         ) : (
@@ -150,11 +326,7 @@ export default function ScannerPage() {
                   </div>
                   <Button
                     variant="outline"
-                    onClick={() => {
-                      setMembership(null)
-                      setManualToken('')
-                      setError('')
-                    }}
+                    onClick={resetScanner}
                   >
                     Nuevo escaneo
                   </Button>
