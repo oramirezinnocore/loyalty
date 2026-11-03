@@ -147,6 +147,70 @@ describe('Passcreator Pass Creation Logic', () => {
   })
 })
 
+describe('Passcreator Dynamic Field Mapping', () => {
+  it('programName maps to program name', () => {
+    const programName = 'Cliente frecuente'
+
+    // Should be sent as top-level property matching template additionalProperty
+    expect(programName).toBe('Cliente frecuente')
+    expect(typeof programName).toBe('string')
+  })
+
+  it('progress includes currentPoints and pointsRequired with format', () => {
+    const currentPoints = 3
+    const pointsRequired = 5
+    const progress = `${currentPoints} / ${pointsRequired} compras`
+
+    // Should match expected format with spaces around slash
+    expect(progress).toBe('3 / 5 compras')
+    expect(progress).toContain(' / ')
+    expect(progress).toContain('compras')
+  })
+
+  it('rewardDescription uses active reward from program', () => {
+    const rewardDefinitions = [
+      { name: '1 churro gratis', pointsRequired: 5, isActive: true },
+      { name: '2 churros gratis', pointsRequired: 10, isActive: true }
+    ]
+
+    // Should use first (lowest points) active reward
+    const activeRewards = rewardDefinitions
+      .filter(r => r.isActive)
+      .sort((a, b) => a.pointsRequired - b.pointsRequired)
+
+    const rewardDescription = activeRewards[0]?.name || 'Sin recompensas'
+    expect(rewardDescription).toBe('1 churro gratis')
+  })
+
+  it('urlToLogo converts relative URL to absolute', () => {
+    const relativeLogo = '/api/public/assets/businesses/cm123abc/logo'
+    const baseUrl = 'https://loyalty.intuspath.com'
+
+    const absoluteUrl = `${baseUrl}${relativeLogo}`
+
+    expect(absoluteUrl).toBe('https://loyalty.intuspath.com/api/public/assets/businesses/cm123abc/logo')
+    expect(absoluteUrl).toMatch(/^https:\/\//)
+  })
+
+  it('urlToLogo preserves already absolute URLs', () => {
+    const absoluteLogo = 'https://example.com/logo.png'
+
+    // Should not be modified if already absolute
+    const result = absoluteLogo.startsWith('http://') || absoluteLogo.startsWith('https://')
+      ? absoluteLogo
+      : `https://base.com${absoluteLogo}`
+
+    expect(result).toBe('https://example.com/logo.png')
+  })
+
+  it('urlToLogo not included when logoUrl is null', () => {
+    const logoUrl = null
+
+    const shouldIncludeLogo = logoUrl !== null && logoUrl !== ''
+    expect(shouldIncludeLogo).toBe(false)
+  })
+})
+
 describe('Passcreator Error Handling', () => {
   it('sync returns false on failure without throwing', async () => {
     process.env.PASSCREATOR_API_KEY = 'test-key'

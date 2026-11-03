@@ -20,6 +20,49 @@ function getPasscreatorTemplateId(): string {
   return process.env.PASSCREATOR_TEMPLATE_ID || ''
 }
 
+/**
+ * Get absolute logo URL for Passcreator
+ * Passcreator requires publicly accessible HTTPS URLs
+ */
+function getAbsoluteLogoUrl(business: any): string | null {
+  if (!business.logoUrl) {
+    return null
+  }
+
+  // Already absolute URL - use as-is
+  if (business.logoUrl.startsWith('http://') || business.logoUrl.startsWith('https://')) {
+    return business.logoUrl
+  }
+
+  // Relative URL - construct absolute URL
+  const baseUrl = process.env.NEXT_PUBLIC_APP_URL ||
+                  process.env.NEXTAUTH_URL ||
+                  'https://loyalty.intuspath.com'
+
+  // Remove leading slash if present to avoid double slashes
+  const path = business.logoUrl.startsWith('/') ? business.logoUrl : `/${business.logoUrl}`
+
+  return `${baseUrl}${path}`
+}
+
+/**
+ * Get reward description for pass display
+ * Uses the active reward definition from the program
+ */
+function getRewardDescription(program: any): string {
+  // Get active reward definitions, sorted by points required (lowest first)
+  const activeRewards = program.rewardDefinitions
+    .filter((r: any) => r.isActive)
+    .sort((a: any, b: any) => a.pointsRequired - b.pointsRequired)
+
+  // Return name of first (lowest points) active reward
+  if (activeRewards.length > 0) {
+    return activeRewards[0].name
+  }
+
+  return 'Sin recompensas'
+}
+
 interface PasscreatorResponse {
   success: boolean
   description: string
@@ -90,24 +133,30 @@ export async function createOrUpdatePass(membershipToken: string): Promise<strin
   }
 
   // Create new pass
+  const absoluteLogoUrl = getAbsoluteLogoUrl(business)
+
   const payload = {
     data: {
+      // Template identification
       templateId: TEMPLATE_ID,
       userProvidedId: membershipToken, // Use membership token as external ID
-      barcodeValue: membershipToken, // QR code value
       enforceUniqueUserProvidedId: true,
-      // Dynamic data - Passcreator template fields
-      // Note: Field names depend on template configuration
-      // These are standard Store Card fields
+
+      // System properties
+      barcodeValue: membershipToken, // QR code value - DO NOT CHANGE
       storedValue: membership.currentPoints,
-      // Generic properties for custom data
+      ...(absoluteLogoUrl && { urlToLogo: absoluteLogoUrl }),
+
+      // Dynamic field values - match template additionalProperties
+      programName: program.name,
+      progress: `${membership.currentPoints} / ${program.pointsRequired} compras`,
+      rewardDescription: getRewardDescription(program),
+
+      // Generic properties for metadata/debugging
       genericProperties: {
         'customer-name': `${membership.customer.firstName} ${membership.customer.lastName || ''}`.trim(),
-        'program-name': program.name,
-        'program-description': program.publicDescription || '',
-        'business-name': business.name,
-        'progress': `${membership.currentPoints}/${program.pointsRequired}`,
-        'rewards-available': membership.earnedRewards.length.toString()
+        'business-id': business.id,
+        'program-id': program.id
       }
     }
   }
@@ -169,17 +218,24 @@ async function updatePass(
   program: any
 ): Promise<string> {
   const API_KEY = getPasscreatorApiKey()
+  const absoluteLogoUrl = getAbsoluteLogoUrl(business)
 
   const payload = {
     data: {
+      // System properties
       storedValue: membership.currentPoints,
+      ...(absoluteLogoUrl && { urlToLogo: absoluteLogoUrl }),
+
+      // Dynamic field values - match template additionalProperties
+      programName: program.name,
+      progress: `${membership.currentPoints} / ${program.pointsRequired} compras`,
+      rewardDescription: getRewardDescription(program),
+
+      // Generic properties for metadata
       genericProperties: {
         'customer-name': `${membership.customer.firstName} ${membership.customer.lastName || ''}`.trim(),
-        'program-name': program.name,
-        'program-description': program.publicDescription || '',
-        'business-name': business.name,
-        'progress': `${membership.currentPoints}/${program.pointsRequired}`,
-        'rewards-available': membership.earnedRewards.length.toString()
+        'business-id': business.id,
+        'program-id': program.id
       }
     }
   }
