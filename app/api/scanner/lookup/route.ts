@@ -1,10 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
-import { requireBusinessAccess } from '@/lib/authorization'
+import { requireAuth, requireBusinessAccess } from '@/lib/authorization'
 
 export async function POST(request: NextRequest) {
   try {
-    const session = await requireBusinessAccess('')
+    // 1. Verify authentication (session exists)
+    const session = await requireAuth()
     const user = session.user as any
 
     const body = await request.json()
@@ -17,7 +18,7 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Verify user has access to this business
+    // 2. Verify user has access to this specific business
     await requireBusinessAccess(businessId)
 
     // Lookup membership
