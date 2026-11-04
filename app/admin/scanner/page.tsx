@@ -64,7 +64,7 @@ export default function ScannerPage() {
       // Verify DOM element exists and is ready
       const element = document.getElementById(qrCodeRegionId)
       if (!element) {
-        throw new Error('Camera container element not found. Please refresh the page.')
+        throw new Error('No se pudo inicializar la cámara. Por favor, recarga la página.')
       }
 
       // Initialize Html5Qrcode instance
@@ -76,7 +76,6 @@ export default function ScannerPage() {
       const isSafari = /^((?!chrome|android).)*safari/i.test(navigator.userAgent)
 
       // iOS Safari: Use facingMode instead of deviceId
-      // This is more reliable on iOS devices
       if (isIOS || isSafari) {
         console.log('iOS/Safari detected, using facingMode constraint')
 
@@ -93,7 +92,6 @@ export default function ScannerPage() {
             },
             (errorMessage) => {
               // QR scan error (expected during normal scanning)
-              // Don't show these errors to user
             }
           )
 
@@ -103,10 +101,10 @@ export default function ScannerPage() {
         } catch (facingModeError: any) {
           console.warn('facingMode failed, trying fallback:', facingModeError.name, facingModeError.message)
 
-          // Fallback: try with "user" (front camera) if environment fails
+          // Fallback: try with "user" (front camera)
           try {
             await html5QrCode.start(
-              { facingMode: "user" }, // Front camera
+              { facingMode: "user" },
               {
                 fps: 10,
                 qrbox: { width: 250, height: 250 },
@@ -116,7 +114,7 @@ export default function ScannerPage() {
                 onQRCodeScanned(decodedText)
               },
               (errorMessage) => {
-                // QR scan error (expected during normal scanning)
+                // QR scan error
               }
             )
 
@@ -125,7 +123,7 @@ export default function ScannerPage() {
             return
           } catch (userFacingError: any) {
             console.error('Both facingMode attempts failed:', userFacingError)
-            throw facingModeError // Throw original error for proper handling
+            throw facingModeError
           }
         }
       }
@@ -135,10 +133,10 @@ export default function ScannerPage() {
 
       const devices = await Html5Qrcode.getCameras()
       if (!devices || devices.length === 0) {
-        throw new Error('No se detectó ninguna cámara en este dispositivo')
+        throw new Error('No se detectó ninguna cámara en este dispositivo.')
       }
 
-      // Prefer rear camera on mobile devices
+      // Prefer rear camera
       let cameraId = devices[0].id
       const rearCamera = devices.find(device =>
         device.label.toLowerCase().includes('back') ||
@@ -149,7 +147,6 @@ export default function ScannerPage() {
         cameraId = rearCamera.id
       }
 
-      // Start scanning with deviceId
       await html5QrCode.start(
         cameraId,
         {
@@ -161,7 +158,7 @@ export default function ScannerPage() {
           onQRCodeScanned(decodedText)
         },
         (errorMessage) => {
-          // QR scan error (expected during normal scanning)
+          // QR scan error
         }
       )
 
@@ -170,32 +167,27 @@ export default function ScannerPage() {
     } catch (err: any) {
       isInitializingRef.current = false
 
-      // Log full error for debugging
       console.error('Camera initialization error:', {
         name: err.name,
         message: err.message,
-        stack: err.stack,
-        constraint: err.constraint
+        stack: err.stack
       })
 
-      // User-friendly error messages based on error type
+      // User-friendly error messages
       if (err.name === 'NotAllowedError' || err.message?.includes('Permission')) {
         setCameraError('Permiso de cámara denegado. Por favor, permite el acceso a la cámara en la configuración de tu navegador.')
-      } else if (err.name === 'NotFoundError' || err.message?.includes('No se detectó')) {
-        setCameraError('No se detectó ninguna cámara en este dispositivo. Usa el ingreso manual.')
+      } else if (err.name === 'NotFoundError' || err.message?.includes('detectó')) {
+        setCameraError('No se detectó ninguna cámara en este dispositivo.')
       } else if (err.name === 'NotReadableError') {
         setCameraError('La cámara está siendo usada por otra aplicación. Cierra otras aplicaciones y vuelve a intentar.')
       } else if (err.name === 'OverconstrainedError') {
-        setCameraError('La cámara no soporta la configuración requerida. Intenta con otro dispositivo o usa el ingreso manual.')
+        setCameraError('La cámara no soporta la configuración requerida. Intenta con otro dispositivo.')
       } else if (err.name === 'NotSupportedError') {
-        setCameraError('Tu navegador no soporta acceso a la cámara. Usa el ingreso manual.')
+        setCameraError('Tu navegador no soporta acceso a la cámara.')
       } else if (err.name === 'SecurityError') {
         setCameraError('Acceso a la cámara bloqueado por seguridad. Verifica que estés usando HTTPS.')
-      } else if (err.message?.includes('container element')) {
-        setCameraError(err.message)
       } else {
-        // Generic error with technical details for reporting
-        setCameraError(`Error al activar la cámara (${err.name || 'Error'}). Usa el ingreso manual como alternativa.`)
+        setCameraError('Error al activar la cámara. Usa el ingreso manual como alternativa.')
       }
 
       await stopCamera()
@@ -203,14 +195,12 @@ export default function ScannerPage() {
   }
 
   const onQRCodeScanned = async (decodedText: string) => {
-    // Stop camera immediately to prevent duplicate scans
+    // Stop camera immediately
     await stopCamera()
 
     // Extract token from QR code
-    // QR codes contain the full URL or just the token
     let token = decodedText
 
-    // Handle full URL format (from wallet pages)
     if (decodedText.includes('/wallet/')) {
       const parts = decodedText.split('/wallet/')
       if (parts.length > 1) {
@@ -218,14 +208,12 @@ export default function ScannerPage() {
       }
     }
 
-    // Handle other URL formats
     if (token.includes('://')) {
       const url = new URL(token)
       const pathParts = url.pathname.split('/')
       token = pathParts[pathParts.length - 1]
     }
 
-    // Validate token format (should be a CUID)
     if (token && token.length >= 20) {
       await lookupCustomer(token)
     } else {
@@ -280,7 +268,6 @@ export default function ScannerPage() {
         throw new Error(data.error || 'Error al registrar compra')
       }
 
-      // Refresh membership data
       await lookupCustomer(membership.publicToken)
 
       alert(data.reachedGoal
@@ -304,60 +291,71 @@ export default function ScannerPage() {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      <div className="bg-white border-b">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
-          <h1 className="text-2xl font-bold">Escáner de clientes</h1>
+      {/* Header */}
+      <div className="bg-white border-b shadow-sm">
+        <div className="max-w-2xl mx-auto px-4 sm:px-6 py-4">
+          <h1 className="text-xl sm:text-2xl font-bold text-gray-900">Escáner de clientes</h1>
         </div>
       </div>
 
-      <div className="max-w-4xl mx-auto px-4 py-6">
+      {/* Main Content */}
+      <div className="max-w-2xl mx-auto px-4 sm:px-6 py-4 sm:py-6">
         {!membership ? (
           <Card>
-            <CardContent className="p-6">
-              <div className="text-center mb-6">
-                <h2 className="text-xl font-semibold mb-2">
-                  Escanea el código QR del cliente
+            <CardContent className="p-4 sm:p-6">
+              {/* Title */}
+              <div className="text-center mb-4">
+                <h2 className="text-lg sm:text-xl font-semibold text-gray-900 mb-1">
+                  Escanea el código QR
                 </h2>
-                <p className="text-gray-600">
+                <p className="text-sm text-gray-600">
                   Usa la cámara o ingresa el código manualmente
                 </p>
               </div>
 
-              {/* QR Scanner */}
-              <div className="mb-6">
+              {/* QR Scanner Container - ALWAYS in DOM */}
+              <div className="mb-4">
+                {/* Camera Button or Active State */}
                 {!cameraActive ? (
                   <Button
                     onClick={startCamera}
                     disabled={loading}
-                    className="w-full mb-4"
+                    className="w-full py-6 text-base"
                     size="lg"
-                    variant="default"
                   >
                     📷 Activar cámara
                   </Button>
                 ) : (
-                  <div className="space-y-4">
-                    <div
-                      id={qrCodeRegionId}
-                      className="mx-auto border-2 border-blue-500 rounded-lg overflow-hidden"
-                      style={{ maxWidth: '500px' }}
-                    />
+                  <div className="space-y-3">
+                    <p className="text-sm text-center text-gray-700 font-medium">
+                      Apunta la cámara al código QR del cliente
+                    </p>
                     <Button
                       onClick={stopCamera}
                       variant="outline"
                       className="w-full"
+                      size="lg"
                     >
-                      Cerrar cámara
+                      Detener cámara
                     </Button>
-                    <p className="text-sm text-center text-gray-600">
-                      Apunta la cámara al código QR del cliente
-                    </p>
                   </div>
                 )}
 
+                {/* QR Reader Container - ALWAYS RENDERED */}
+                <div
+                  id={qrCodeRegionId}
+                  className={`mx-auto mt-4 border-2 rounded-lg overflow-hidden transition-all ${
+                    cameraActive
+                      ? 'border-blue-500 opacity-100'
+                      : 'border-transparent opacity-0 h-0'
+                  }`}
+                  style={{ maxWidth: '400px' }}
+                />
+
+                {/* Camera Error */}
                 {cameraError && (
-                  <div className="bg-yellow-50 border border-yellow-200 text-yellow-800 px-4 py-3 rounded mt-4">
-                    <p className="font-semibold">Error de cámara:</p>
+                  <div className="mt-4 bg-yellow-50 border border-yellow-300 text-yellow-900 px-4 py-3 rounded-lg">
+                    <p className="font-semibold text-sm">Error de cámara</p>
                     <p className="text-sm mt-1">{cameraError}</p>
                   </div>
                 )}
@@ -365,24 +363,26 @@ export default function ScannerPage() {
 
               {/* Manual Entry */}
               {!cameraActive && (
-                <div className="space-y-4">
-                  <div className="relative">
+                <div className="space-y-3">
+                  <div className="relative py-3">
                     <div className="absolute inset-0 flex items-center">
                       <div className="w-full border-t border-gray-300" />
                     </div>
-                    <div className="relative flex justify-center text-sm">
-                      <span className="px-2 bg-white text-gray-500">O ingresa el código manualmente</span>
+                    <div className="relative flex justify-center text-xs">
+                      <span className="px-3 bg-white text-gray-500 font-medium">
+                        O ingresa el código manualmente
+                      </span>
                     </div>
                   </div>
 
                   <div>
-                    <label className="block text-sm font-medium mb-1">
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
                       Código de cliente
                     </label>
                     <input
                       type="text"
-                      className="w-full px-3 py-2 border rounded-lg"
-                      placeholder="Ingresa el token del cliente"
+                      className="w-full px-3 py-2.5 text-base border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                      placeholder="Ingresa el código del cliente"
                       value={manualToken}
                       onChange={(e) => setManualToken(e.target.value)}
                     />
@@ -391,15 +391,15 @@ export default function ScannerPage() {
                   <Button
                     onClick={() => lookupCustomer(manualToken)}
                     disabled={!manualToken || loading}
-                    className="w-full"
+                    className="w-full py-6 text-base"
                     size="lg"
                   >
                     {loading ? 'Buscando...' : 'Buscar cliente'}
                   </Button>
 
                   {error && (
-                    <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded">
-                      {error}
+                    <div className="bg-red-50 border border-red-300 text-red-900 px-4 py-3 rounded-lg">
+                      <p className="text-sm font-medium">{error}</p>
                     </div>
                   )}
                 </div>
@@ -410,28 +410,29 @@ export default function ScannerPage() {
           <div className="space-y-4">
             {/* Customer Info */}
             <Card>
-              <CardContent className="p-6">
+              <CardContent className="p-4 sm:p-6">
                 <div className="flex justify-between items-start mb-4">
                   <div>
-                    <h2 className="text-2xl font-bold">
+                    <h2 className="text-xl sm:text-2xl font-bold text-gray-900">
                       {membership.customer.firstName} {membership.customer.lastName || ''}
                     </h2>
-                    <p className="text-gray-600">{membership.customer.phone}</p>
+                    <p className="text-sm sm:text-base text-gray-600 mt-1">{membership.customer.phone}</p>
                   </div>
                   <Button
                     variant="outline"
                     onClick={resetScanner}
+                    size="sm"
                   >
-                    Nuevo escaneo
+                    Nuevo
                   </Button>
                 </div>
 
                 <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
                   <div className="text-center">
-                    <div className="text-4xl font-bold text-blue-600 mb-2">
+                    <div className="text-3xl sm:text-4xl font-bold text-blue-700 mb-1">
                       {membership.currentPoints}/{membership.loyaltyProgram.pointsRequired}
                     </div>
-                    <p className="text-gray-700">
+                    <p className="text-sm sm:text-base text-gray-800 font-medium">
                       {membership.loyaltyProgram.pointsRequired - membership.currentPoints > 0
                         ? `Faltan ${membership.loyaltyProgram.pointsRequired - membership.currentPoints} compras para recompensa`
                         : '¡Meta alcanzada!'}
@@ -444,18 +445,18 @@ export default function ScannerPage() {
             {/* Available Rewards */}
             {membership.earnedRewards && membership.earnedRewards.length > 0 && (
               <Card>
-                <CardContent className="p-6">
-                  <h3 className="font-semibold mb-3">Recompensas disponibles</h3>
+                <CardContent className="p-4 sm:p-6">
+                  <h3 className="font-semibold text-gray-900 mb-3">Recompensas disponibles</h3>
                   {membership.earnedRewards.map((reward: any) => (
                     <div
                       key={reward.id}
-                      className="bg-green-50 border border-green-200 rounded-lg p-4 mb-2"
+                      className="bg-green-50 border border-green-200 rounded-lg p-3 mb-2"
                     >
-                      <p className="font-semibold text-green-800">
+                      <p className="font-semibold text-green-900">
                         {reward.rewardDefinition.name}
                       </p>
                       {reward.rewardDefinition.description && (
-                        <p className="text-sm text-green-700 mt-1">
+                        <p className="text-sm text-green-800 mt-1">
                           {reward.rewardDefinition.description}
                         </p>
                       )}
@@ -468,16 +469,16 @@ export default function ScannerPage() {
             {/* Recent Transactions */}
             {membership.transactions && membership.transactions.length > 0 && (
               <Card>
-                <CardContent className="p-6">
-                  <h3 className="font-semibold mb-3">Últimas transacciones</h3>
+                <CardContent className="p-4 sm:p-6">
+                  <h3 className="font-semibold text-gray-900 mb-3">Últimas transacciones</h3>
                   <div className="space-y-2">
                     {membership.transactions.map((tx: any) => (
                       <div
                         key={tx.id}
-                        className="flex justify-between items-center p-2 bg-gray-50 rounded"
+                        className="flex justify-between items-center p-2.5 bg-gray-50 rounded-lg"
                       >
-                        <span className="text-sm">{tx.description}</span>
-                        <span className="text-sm font-semibold text-green-600">
+                        <span className="text-sm text-gray-700">{tx.description}</span>
+                        <span className="text-sm font-semibold text-green-700">
                           +{tx.points} pts
                         </span>
                       </div>
@@ -489,19 +490,19 @@ export default function ScannerPage() {
 
             {/* Register Purchase */}
             <Card>
-              <CardContent className="p-6">
+              <CardContent className="p-4 sm:p-6">
                 <Button
                   onClick={registerPurchase}
                   disabled={loading}
-                  className="w-full bg-green-600 hover:bg-green-700"
+                  className="w-full bg-green-600 hover:bg-green-700 py-6 text-base"
                   size="lg"
                 >
                   {loading ? 'Registrando...' : 'Registrar compra'}
                 </Button>
 
                 {error && (
-                  <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded mt-4">
-                    {error}
+                  <div className="bg-red-50 border border-red-300 text-red-900 px-4 py-3 rounded-lg mt-4">
+                    <p className="text-sm font-medium">{error}</p>
                   </div>
                 )}
               </CardContent>
