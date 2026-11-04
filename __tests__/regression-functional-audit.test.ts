@@ -49,6 +49,7 @@ describe('BUG 1 - Scanner Authorization Fix', () => {
     const tokenBusinessId = 'business-B'
 
     // User from business A trying to access membership from business B
+    // @ts-expect-error - Intentionally comparing different literal types to test authorization logic
     const authorized = userBusinessId === membershipBusinessId
 
     expect(authorized).toBe(false)
@@ -61,6 +62,7 @@ describe('BUG 2 - Program Creation with ARCHIVED Program', () => {
     const newProgramStatus = 'ACTIVE'
 
     // Only blocks if existing program is ACTIVE
+    // @ts-expect-error - Intentionally comparing different literal types to test business logic
     const shouldBlock = existingProgramStatus === 'ACTIVE' && newProgramStatus === 'ACTIVE'
 
     expect(shouldBlock).toBe(false)
@@ -91,6 +93,7 @@ describe('BUG 2 - Program Creation with ARCHIVED Program', () => {
     const newProgramStatus = 'ACTIVE'
 
     // Only ACTIVE blocks ACTIVE
+    // @ts-expect-error - Intentionally comparing different literal types to test business logic
     const shouldBlock = existingProgramStatus === 'ACTIVE' && newProgramStatus === 'ACTIVE'
 
     expect(shouldBlock).toBe(false)
@@ -134,6 +137,7 @@ describe('BUG 3 - Delete ARCHIVED Programs UI', () => {
     const membershipCount = 5
 
     // Server always validates - UI just provides feedback
+    // @ts-expect-error - Intentionally comparing different literal types to test validation logic
     const canDelete = membershipCount === 0
 
     expect(canDelete).toBe(false)
@@ -201,6 +205,7 @@ describe('BUG 4 - Wallet Preview Fixes', () => {
     it('should display correct label for PURCHASES program', () => {
       const programType = 'PURCHASES'
 
+      // @ts-expect-error - Intentionally comparing different literal types to test label logic
       const label = programType === 'VISITS' ? 'visitas' :
                     programType === 'PURCHASES' ? 'compras' :
                     programType === 'STREAK' ? 'días' : 'puntos'
@@ -211,7 +216,9 @@ describe('BUG 4 - Wallet Preview Fixes', () => {
     it('should display correct label for STREAK program', () => {
       const programType = 'STREAK'
 
+      // @ts-expect-error - Intentionally comparing different literal types to test label logic
       const label = programType === 'VISITS' ? 'visitas' :
+                    // @ts-expect-error - Intentionally comparing different literal types
                     programType === 'PURCHASES' ? 'compras' :
                     programType === 'STREAK' ? 'días' : 'puntos'
 
@@ -221,8 +228,11 @@ describe('BUG 4 - Wallet Preview Fixes', () => {
     it('should display correct label for POINTS program', () => {
       const programType = 'POINTS'
 
+      // @ts-expect-error - Intentionally comparing different literal types to test label logic
       const label = programType === 'VISITS' ? 'visitas' :
+                    // @ts-expect-error - Intentionally comparing different literal types
                     programType === 'PURCHASES' ? 'compras' :
+                    // @ts-expect-error - Intentionally comparing different literal types
                     programType === 'STREAK' ? 'días' : 'puntos'
 
       expect(label).toBe('puntos')
@@ -321,6 +331,7 @@ describe('Integration - All Fixes Together', () => {
     // 1. Create ACTIVE program when existing is ARCHIVED
     const existingStatus = 'ARCHIVED'
     const newStatus = 'ACTIVE'
+    // @ts-expect-error - Intentionally comparing different literal types to test business logic
     const canCreate = existingStatus !== 'ACTIVE' || newStatus !== 'ACTIVE'
 
     expect(canCreate).toBe(true)

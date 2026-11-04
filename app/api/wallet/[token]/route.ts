@@ -9,38 +9,93 @@ export async function GET(
   try {
     const { token } = await params
 
-    const membership = await prisma.membership.findUnique({
+    // Try Customer.publicToken first (new stable QR)
+    let customer = await prisma.customer.findUnique({
       where: { publicToken: token },
       include: {
-        customer: true,
-        loyaltyProgram: {
+        business: true,
+        memberships: {
+          where: { isActive: true },
           include: {
-            business: true,
-            rewardDefinitions: {
-              where: { isActive: true }
+            loyaltyProgram: {
+              include: {
+                business: true,
+                rewardDefinitions: {
+                  where: { isActive: true }
+                }
+              }
+            },
+            earnedRewards: {
+              where: { status: 'AVAILABLE' },
+              include: {
+                rewardDefinition: true
+              },
+              orderBy: { earnedAt: 'desc' }
+            },
+            transactions: {
+              orderBy: { createdAt: 'desc' },
+              take: 10
             }
-          }
-        },
-        earnedRewards: {
-          where: { status: 'AVAILABLE' },
-          include: {
-            rewardDefinition: true
           },
-          orderBy: { earnedAt: 'desc' }
-        },
-        transactions: {
-          orderBy: { createdAt: 'desc' },
-          take: 10
+          orderBy: { createdAt: 'desc' }
         }
       }
     })
 
-    if (!membership) {
+    // Fallback: Legacy Membership.publicToken lookup
+    if (!customer) {
+      const legacyMembership = await prisma.membership.findUnique({
+        where: { publicToken: token },
+        include: {
+          customer: {
+            include: {
+              business: true,
+              memberships: {
+                where: { isActive: true },
+                include: {
+                  loyaltyProgram: {
+                    include: {
+                      business: true,
+                      rewardDefinitions: {
+                        where: { isActive: true }
+                      }
+                    }
+                  },
+                  earnedRewards: {
+                    where: { status: 'AVAILABLE' },
+                    include: {
+                      rewardDefinition: true
+                    },
+                    orderBy: { earnedAt: 'desc' }
+                  },
+                  transactions: {
+                    orderBy: { createdAt: 'desc' },
+                    take: 10
+                  }
+                },
+                orderBy: { createdAt: 'desc' }
+              }
+            }
+          }
+        }
+      })
+
+      if (legacyMembership) {
+        customer = legacyMembership.customer
+      }
+    }
+
+    if (!customer || customer.memberships.length === 0) {
       return NextResponse.json(
         { error: 'Wallet not found' },
         { status: 404 }
       )
     }
+
+    // Show active program membership (or most recent)
+    const membership = customer.memberships.find(
+      m => m.loyaltyProgram.status === 'ACTIVE'
+    ) || customer.memberships[0]
 
     // Normalize business logoUrl to ensure it's a public API URL
     const normalizedMembership = {

@@ -187,29 +187,69 @@ export async function ensureLoyaltyClass(businessId: string) {
 
 // Create or update loyalty object for a membership
 export async function createOrUpdateLoyaltyObject(membershipToken: string) {
-  const membership = await prisma.membership.findUnique({
+  // NEW: Use stable Customer.publicToken with backwards compatible fallback
+  const customer = await prisma.customer.findUnique({
     where: { publicToken: membershipToken },
     include: {
-      customer: true,
-      loyaltyProgram: {
+      memberships: {
         include: {
-          business: true,
-          rewardDefinitions: {
-            where: { isActive: true }
+          customer: true,
+          loyaltyProgram: {
+            include: {
+              business: true,
+              rewardDefinitions: {
+                where: { isActive: true }
+              }
+            }
+          },
+          earnedRewards: {
+            where: { status: 'AVAILABLE' },
+            include: {
+              rewardDefinition: true
+            }
           }
-        }
-      },
-      earnedRewards: {
-        where: { status: 'AVAILABLE' },
-        include: {
-          rewardDefinition: true
         }
       }
     }
   })
 
-  if (!membership) {
-    throw new Error('Membership not found')
+  // Fallback to legacy Membership.publicToken if customer not found
+  let membership
+  if (!customer) {
+    membership = await prisma.membership.findUnique({
+      where: { publicToken: membershipToken },
+      include: {
+        customer: true,
+        loyaltyProgram: {
+          include: {
+            business: true,
+            rewardDefinitions: {
+              where: { isActive: true }
+            }
+          }
+        },
+        earnedRewards: {
+          where: { status: 'AVAILABLE' },
+          include: {
+            rewardDefinition: true
+          }
+        }
+      }
+    })
+
+    if (!membership) {
+      throw new Error('Membership not found')
+    }
+  } else {
+    // Get active membership from customer
+    const activeMembership = customer.memberships.find(
+      m => m.loyaltyProgram.status === 'ACTIVE'
+    )
+    membership = activeMembership || customer.memberships[0]
+
+    if (!membership) {
+      throw new Error('Membership not found')
+    }
   }
 
   const business = membership.loyaltyProgram.business

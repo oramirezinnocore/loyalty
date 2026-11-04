@@ -21,46 +21,106 @@ export async function POST(request: NextRequest) {
     // 2. Verify user has access to this specific business
     await requireBusinessAccess(businessId)
 
-    // Lookup membership
-    const membership = await prisma.membership.findUnique({
+    // Lookup customer by publicToken (stable identifier across programs)
+    // Try Customer.publicToken first (new stable QR), then fall back to Membership.publicToken (legacy)
+    let customer = await prisma.customer.findUnique({
       where: { publicToken: token },
       include: {
-        customer: true,
-        loyaltyProgram: {
+        business: true,
+        memberships: {
           include: {
-            business: true,
-            rewardDefinitions: {
-              where: { isActive: true }
+            loyaltyProgram: {
+              include: {
+                business: true,
+                rewardDefinitions: {
+                  where: { isActive: true }
+                }
+              }
+            },
+            earnedRewards: {
+              where: { status: 'AVAILABLE' },
+              include: {
+                rewardDefinition: true
+              }
+            },
+            transactions: {
+              orderBy: { createdAt: 'desc' },
+              take: 5
             }
           }
-        },
-        earnedRewards: {
-          where: { status: 'AVAILABLE' },
-          include: {
-            rewardDefinition: true
-          }
-        },
-        transactions: {
-          orderBy: { createdAt: 'desc' },
-          take: 5
         }
       }
     })
 
-    if (!membership) {
+    // Fallback: Legacy lookup by Membership.publicToken (for backwards compatibility)
+    if (!customer) {
+      const legacyMembership = await prisma.membership.findUnique({
+        where: { publicToken: token },
+        include: {
+          customer: {
+            include: {
+              business: true,
+              memberships: {
+                include: {
+                  loyaltyProgram: {
+                    include: {
+                      business: true,
+                      rewardDefinitions: {
+                        where: { isActive: true }
+                      }
+                    }
+                  },
+                  earnedRewards: {
+                    where: { status: 'AVAILABLE' },
+                    include: {
+                      rewardDefinition: true
+                    }
+                  },
+                  transactions: {
+                    orderBy: { createdAt: 'desc' },
+                    take: 5
+                  }
+                }
+              }
+            }
+          }
+        }
+      })
+
+      if (legacyMembership) {
+        customer = legacyMembership.customer
+      }
+    }
+
+    if (!customer) {
       return NextResponse.json(
         { error: 'Customer not found' },
         { status: 404 }
       )
     }
 
-    // Verify membership belongs to this business
-    if (membership.customer.businessId !== businessId) {
+    // Verify customer belongs to this business
+    if (customer.businessId !== businessId) {
       return NextResponse.json(
         { error: 'Customer does not belong to this business' },
         { status: 403 }
       )
     }
+
+    // Get active program membership (or most recent if no active)
+    const activeMembership = customer.memberships.find(
+      m => m.loyaltyProgram.status === 'ACTIVE'
+    ) || customer.memberships[0]
+
+    if (!activeMembership) {
+      return NextResponse.json(
+        { error: 'Customer has no active membership' },
+        { status: 404 }
+      )
+    }
+
+    // Return membership with same structure as before for compatibility
+    const membership = activeMembership
 
     return NextResponse.json({ membership })
   } catch (error: any) {

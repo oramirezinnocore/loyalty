@@ -72,8 +72,9 @@ describe('Customer Registration', () => {
 
     expect(customer).toBeTruthy()
     expect(membership).toBeTruthy()
-    expect(membership.publicToken).toBeTruthy()
-    expect(membership.publicToken.length).toBeGreaterThan(10)
+    // New: Customer has stable publicToken, Membership.publicToken is deprecated
+    expect(customer.publicToken).toBeTruthy()
+    expect(customer.publicToken.length).toBeGreaterThan(10)
     expect(membership.currentPoints).toBe(0)
   })
 

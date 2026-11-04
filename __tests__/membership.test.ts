@@ -53,6 +53,11 @@ describe('Membership', () => {
 
   describe('Public token', () => {
     it('should generate unique non-sequential public token', async () => {
+      // Get first customer from customerId (created in beforeAll)
+      const customer1 = await prisma.customer.findUnique({
+        where: { id: customerId }
+      })
+
       const customer2 = await prisma.customer.create({
         data: {
           businessId,
@@ -63,7 +68,7 @@ describe('Membership', () => {
 
       const membership1 = await prisma.membership.create({
         data: {
-          customerId,
+          customerId: customer1!.id,
           loyaltyProgramId
         }
       })
@@ -75,17 +80,18 @@ describe('Membership', () => {
         }
       })
 
-      expect(membership1.publicToken).toBeTruthy()
-      expect(membership2.publicToken).toBeTruthy()
-      expect(membership1.publicToken).not.toBe(membership2.publicToken)
+      // NEW: Verify Customer.publicToken (stable identifier), not Membership.publicToken (deprecated)
+      expect(customer1!.publicToken).toBeTruthy()
+      expect(customer2.publicToken).toBeTruthy()
+      expect(customer1!.publicToken).not.toBe(customer2.publicToken)
 
       // Check that tokens are not sequential integers
-      expect(Number.isNaN(Number(membership1.publicToken))).toBe(true)
-      expect(Number.isNaN(Number(membership2.publicToken))).toBe(true)
+      expect(Number.isNaN(Number(customer1!.publicToken))).toBe(true)
+      expect(Number.isNaN(Number(customer2.publicToken))).toBe(true)
 
       // Check minimum length for security
-      expect(membership1.publicToken.length).toBeGreaterThan(10)
-      expect(membership2.publicToken.length).toBeGreaterThan(10)
+      expect(customer1!.publicToken.length).toBeGreaterThan(10)
+      expect(customer2.publicToken.length).toBeGreaterThan(10)
     })
 
     it('should enforce unique public token constraint', async () => {

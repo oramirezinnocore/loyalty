@@ -246,22 +246,23 @@ describe('Loyalty Program E2E', () => {
       })
       membershipId = membership.id
 
-      expect(membership.publicToken).toBeDefined()
-      expect(membership.publicToken).toHaveLength(25) // CUID length
+      // NEW: Check Customer.publicToken (stable identifier), not Membership.publicToken (deprecated)
+      expect(customer.publicToken).toBeDefined()
+      expect(customer.publicToken).toHaveLength(25) // CUID length
       expect(membership.currentPoints).toBe(0)
       expect(membership.isActive).toBe(true)
     })
 
     it('should use secure public token (not DB ID)', async () => {
-      const membership = await prisma.membership.findUnique({
-        where: { id: membershipId }
+      const customer = await prisma.customer.findUnique({
+        where: { id: customerId }
       })
 
-      // Verify publicToken is not the DB ID
-      expect(membership!.publicToken).not.toBe(membershipId)
+      // NEW: Verify Customer.publicToken (stable identifier), not Membership.publicToken (deprecated)
+      expect(customer!.publicToken).not.toBe(customerId)
 
       // Verify publicToken is unique and follows CUID format
-      expect(membership!.publicToken).toMatch(/^[a-z0-9]{25}$/)
+      expect(customer!.publicToken).toMatch(/^[a-z0-9]{25}$/)
     })
   })
 
@@ -552,47 +553,51 @@ describe('Loyalty Program E2E', () => {
 
   describe('Wallet Readiness', () => {
     it('should load membership by public token', async () => {
-      const membership = await prisma.membership.findUnique({
-        where: { id: membershipId }
+      const customer = await prisma.customer.findUnique({
+        where: { id: customerId }
       })
 
-      // Query by publicToken (as wallet endpoint does)
-      const membershipByToken = await prisma.membership.findUnique({
-        where: { publicToken: membership!.publicToken },
+      // NEW: Query by Customer.publicToken (stable identifier), not Membership.publicToken (deprecated)
+      const customerByToken = await prisma.customer.findUnique({
+        where: { publicToken: customer!.publicToken },
         include: {
-          customer: true,
-          loyaltyProgram: {
+          memberships: {
             include: {
-              business: true,
-              rewardDefinitions: {
-                where: { isActive: true }
+              loyaltyProgram: {
+                include: {
+                  business: true,
+                  rewardDefinitions: {
+                    where: { isActive: true }
+                  }
+                }
+              },
+              earnedRewards: {
+                where: { status: EarnedRewardStatus.AVAILABLE }
               }
             }
-          },
-          earnedRewards: {
-            where: { status: EarnedRewardStatus.AVAILABLE }
           }
         }
       })
 
-      expect(membershipByToken).not.toBeNull()
-      expect(membershipByToken!.id).toBe(membershipId)
-      expect(membershipByToken!.customer).toBeDefined()
-      expect(membershipByToken!.loyaltyProgram).toBeDefined()
-      expect(membershipByToken!.loyaltyProgram.business).toBeDefined()
+      expect(customerByToken).not.toBeNull()
+      expect(customerByToken!.id).toBe(customerId)
+      expect(customerByToken!.memberships).toBeDefined()
+      expect(customerByToken!.memberships.length).toBeGreaterThan(0)
+      expect(customerByToken!.memberships[0].loyaltyProgram).toBeDefined()
+      expect(customerByToken!.memberships[0].loyaltyProgram.business).toBeDefined()
     })
 
     it('should expose public token only (not DB IDs)', async () => {
-      const membership = await prisma.membership.findUnique({
-        where: { id: membershipId }
+      const customer = await prisma.customer.findUnique({
+        where: { id: customerId }
       })
 
-      // Wallet should use publicToken
-      expect(membership!.publicToken).toBeDefined()
-      expect(membership!.publicToken).toHaveLength(25)
+      // NEW: Wallet uses Customer.publicToken (stable identifier), not Membership.publicToken (deprecated)
+      expect(customer!.publicToken).toBeDefined()
+      expect(customer!.publicToken).toHaveLength(25)
 
       // publicToken should be secure (CUID)
-      expect(membership!.publicToken).toMatch(/^c[a-z0-9]{24}$/)
+      expect(customer!.publicToken).toMatch(/^c[a-z0-9]{24}$/)
     })
   })
 })

@@ -110,8 +110,17 @@ describe('Loyalty Program Lifecycle', () => {
   })
 
   beforeEach(async () => {
-    // Clean up programs before each test
+    // Clean up programs and customers before each test
     await prisma.loyaltyProgram.deleteMany({
+      where: {
+        businessId: {
+          in: [testBusiness.id, testBusiness2.id]
+        }
+      }
+    })
+
+    // NEW: Clean up customers to prevent auto-enrollment of leftover customers from previous tests
+    await prisma.customer.deleteMany({
       where: {
         businessId: {
           in: [testBusiness.id, testBusiness2.id]
