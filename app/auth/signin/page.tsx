@@ -46,51 +46,97 @@ export default function SignInPage() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-purple-50 flex items-center justify-center p-4">
-      <Card className="w-full max-w-md">
-        <CardHeader>
-          <CardTitle className="text-center text-2xl">IntusPath Loyalty</CardTitle>
-          <p className="text-center text-gray-600 text-sm mt-2">
+      <Card className="w-full max-w-md shadow-lg">
+        <CardHeader className="space-y-2 pb-4">
+          <CardTitle
+            className="text-center text-2xl sm:text-3xl font-bold"
+            style={{ color: '#102A43' }}
+          >
+            IntusPath Loyalty
+          </CardTitle>
+          <p
+            className="text-center text-sm"
+            style={{ color: '#64748B' }}
+          >
             Inicia sesión en tu cuenta
           </p>
         </CardHeader>
 
-        <CardContent>
-          <form onSubmit={handleSubmit} className="space-y-4">
+        <CardContent className="pt-2">
+          <form onSubmit={handleSubmit} className="space-y-5">
             <div>
-              <label className="block text-sm font-medium mb-1">Email</label>
+              <label
+                className="block text-sm font-medium mb-2"
+                style={{ color: '#334155' }}
+              >
+                Email
+              </label>
               <input
                 type="email"
                 required
-                className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                placeholder="correo@ejemplo.com"
+                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors bg-white text-base"
+                style={{ color: '#0F172A' }}
                 value={formData.email}
                 onChange={(e) => setFormData({ ...formData, email: e.target.value })}
               />
             </div>
 
             <div>
-              <label className="block text-sm font-medium mb-1">Contraseña</label>
+              <label
+                className="block text-sm font-medium mb-2"
+                style={{ color: '#334155' }}
+              >
+                Contraseña
+              </label>
               <input
                 type="password"
                 required
-                className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                placeholder="••••••••"
+                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors bg-white text-base"
+                style={{ color: '#0F172A' }}
                 value={formData.password}
                 onChange={(e) => setFormData({ ...formData, password: e.target.value })}
               />
             </div>
 
             {error && (
-              <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded">
+              <div className="bg-red-50 border border-red-300 text-red-800 px-4 py-3 rounded-lg text-sm font-medium">
                 {error}
               </div>
             )}
 
-            <Button type="submit" disabled={loading} className="w-full" size="lg">
+            <Button
+              type="submit"
+              disabled={loading}
+              className="w-full mt-6 bg-blue-600 hover:bg-blue-700 text-white font-semibold"
+              size="lg"
+            >
               {loading ? 'Iniciando sesión...' : 'Iniciar sesión'}
             </Button>
           </form>
 
         </CardContent>
       </Card>
+
+      {/* Force light mode for login page - prevent dark mode text issues */}
+      <style jsx global>{`
+        body {
+          color: #0F172A !important;
+        }
+        input::placeholder {
+          color: #64748B;
+          opacity: 1;
+        }
+        input::-webkit-input-placeholder {
+          color: #64748B;
+          opacity: 1;
+        }
+        input::-moz-placeholder {
+          color: #64748B;
+          opacity: 1;
+        }
+      `}</style>
     </div>
   )
 }
