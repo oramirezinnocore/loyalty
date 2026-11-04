@@ -19,6 +19,7 @@ interface WalletData {
     }
     loyaltyProgram: {
       name: string
+      programType: 'VISITS' | 'PURCHASES' | 'STREAK' | 'POINTS'
       pointsRequired: number
       business: {
         name: string
@@ -100,6 +101,18 @@ export default function WalletPage() {
   const percentage = Math.min((progress / goal) * 100, 100)
   const brandColor = membership.loyaltyProgram.business.brandColor || '#F97316'
 
+  // Get progress label based on program type
+  const getProgressLabel = (remaining: number) => {
+    const typeLabel =
+      membership.loyaltyProgram.programType === 'VISITS' ? 'visitas' :
+      membership.loyaltyProgram.programType === 'PURCHASES' ? 'compras' :
+      membership.loyaltyProgram.programType === 'STREAK' ? 'días consecutivos' : 'puntos'
+
+    return remaining > 0
+      ? `${remaining} ${typeLabel} para tu próxima recompensa`
+      : '¡Meta alcanzada!'
+  }
+
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Header */}
@@ -140,9 +153,7 @@ export default function WalletPage() {
                 {progress}/{goal}
               </div>
               <p className="text-gray-600 text-sm mt-1">
-                {goal - progress > 0
-                  ? `${goal - progress} compras para tu próxima recompensa`
-                  : '¡Meta alcanzada!'}
+                {getProgressLabel(goal - progress)}
               </p>
             </div>
 

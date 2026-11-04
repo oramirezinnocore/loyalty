@@ -121,7 +121,12 @@ export default async function ProgramPage() {
                   <div className="grid grid-cols-2 gap-4">
                     <div>
                       <label className="block text-sm font-medium text-gray-500">Meta</label>
-                      <p className="mt-1 text-2xl font-bold text-blue-600">{activeProgram.pointsRequired} compras</p>
+                      <p className="mt-1 text-2xl font-bold text-blue-600">
+                        {activeProgram.pointsRequired}{' '}
+                        {activeProgram.programType === 'VISITS' ? 'visitas' :
+                         activeProgram.programType === 'PURCHASES' ? 'compras' :
+                         activeProgram.programType === 'STREAK' ? 'días' : 'puntos'}
+                      </p>
                     </div>
                     <div>
                       <label className="block text-sm font-medium text-gray-500">Clientes inscritos</label>
@@ -219,7 +224,11 @@ export default async function ProgramPage() {
                         </div>
                         <p className="text-sm text-gray-600 mb-2">{program.publicDescription}</p>
                         <div className="text-sm text-gray-500">
-                          <span>Meta: {program.pointsRequired} compras</span>
+                          <span>Meta: {program.pointsRequired}{' '}
+                            {program.programType === 'VISITS' ? 'visitas' :
+                             program.programType === 'PURCHASES' ? 'compras' :
+                             program.programType === 'STREAK' ? 'días' : 'puntos'}
+                          </span>
                           <span className="mx-2">•</span>
                           <span>Clientes: {program._count.memberships}</span>
                           {program.rewardDefinitions[0] && (

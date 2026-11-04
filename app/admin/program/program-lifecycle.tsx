@@ -59,19 +59,23 @@ export function ProgramLifecycle({ programId, status, hasMemberships }: ProgramL
   }
 
   if (status === 'ARCHIVED') {
-    // ARCHIVED programs: show delete button only if no activity
+    // ARCHIVED programs: always show delete button
+    // Server-side validation will prevent deletion if there's activity
     return (
       <div className="flex gap-2 flex-wrap">
-        {!hasMemberships && (
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={handleDelete}
-            disabled={loading}
-            className="text-red-600 hover:text-red-700"
-          >
-            Eliminar definitivamente
-          </Button>
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={handleDelete}
+          disabled={loading}
+          className="text-red-600 hover:text-red-700"
+        >
+          Eliminar definitivamente
+        </Button>
+        {hasMemberships && (
+          <p className="text-xs text-gray-500 italic">
+            (Programa con clientes registrados - eliminación restringida)
+          </p>
         )}
       </div>
     )

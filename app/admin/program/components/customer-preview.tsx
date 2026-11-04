@@ -1,5 +1,6 @@
 'use client'
 
+import { useState } from 'react'
 import { ProgramType } from '@prisma/client'
 import { QrCode } from 'lucide-react'
 import Image from 'next/image'
@@ -27,6 +28,7 @@ export function CustomerPreview({
   businessName,
   businessLogoUrl
 }: CustomerPreviewProps) {
+  const [logoError, setLogoError] = useState(false)
   // Generate progress indicators (limit to 10 for visual clarity)
   const renderProgress = () => {
     const displayGoal = Math.min(goal, 10)
@@ -96,7 +98,7 @@ export function CustomerPreview({
           {/* Business Header */}
           <div className="bg-gradient-to-r from-blue-600 to-blue-500 p-3 text-white">
             <div className="flex items-center gap-2">
-              {businessLogoUrl ? (
+              {businessLogoUrl && !logoError ? (
                 <div className="w-10 h-10 rounded-full bg-white flex items-center justify-center overflow-hidden shrink-0">
                   <Image
                     src={businessLogoUrl}
@@ -104,6 +106,7 @@ export function CustomerPreview({
                     width={40}
                     height={40}
                     className="object-cover w-full h-full"
+                    onError={() => setLogoError(true)}
                   />
                 </div>
               ) : (
@@ -162,8 +165,11 @@ export function CustomerPreview({
               <p className="text-xs font-medium text-gray-600 uppercase mb-2">
                 Mi código de cliente
               </p>
-              <div className="flex items-center justify-center py-3 bg-gray-50 rounded-lg">
+              <div className="flex flex-col items-center justify-center py-3 bg-gray-50 rounded-lg">
                 <QrCode className="w-12 h-12 text-gray-400" />
+                <p className="text-xs text-gray-500 mt-2 italic">
+                  (Vista previa - QR real se genera al registrarse)
+                </p>
               </div>
             </div>
           </div>
