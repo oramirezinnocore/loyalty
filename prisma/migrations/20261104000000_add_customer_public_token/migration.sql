@@ -16,9 +16,10 @@ SET "publicToken" = (
 )
 WHERE c."publicToken" IS NULL;
 
--- Step 3: For any customers without memberships (edge case), generate new token
+-- Step 3: For any customers without memberships (edge case), generate CUID-compatible token
+-- Using extension for better random strings (similar to CUID format)
 UPDATE "Customer"
-SET "publicToken" = gen_random_uuid()::text
+SET "publicToken" = 'clmig' || lower(substring(md5(random()::text || clock_timestamp()::text) from 1 for 20))
 WHERE "publicToken" IS NULL;
 
 -- Step 4: Make publicToken NOT NULL and UNIQUE
@@ -26,8 +27,10 @@ ALTER TABLE "Customer" ALTER COLUMN "publicToken" SET NOT NULL;
 CREATE UNIQUE INDEX "Customer_publicToken_key" ON "Customer"("publicToken");
 CREATE INDEX "Customer_publicToken_idx" ON "Customer"("publicToken");
 
--- Step 5: Add unique constraint on businessId + phone (prevent duplicates by phone)
-CREATE UNIQUE INDEX "Customer_businessId_phone_key" ON "Customer"("businessId", "phone");
+-- Step 5: Add unique constraint on businessId + phone (handle NULL phones with partial index)
+-- CRITICAL FIX: Use WHERE clause to exclude NULL phones from unique constraint
+-- This prevents constraint violation when phone is NULL
+CREATE UNIQUE INDEX "Customer_businessId_phone_key" ON "Customer"("businessId", "phone") WHERE "phone" IS NOT NULL;
 
 -- Step 6: Make Membership.publicToken nullable (deprecated, kept for backwards compatibility)
 ALTER TABLE "Membership" ALTER COLUMN "publicToken" DROP NOT NULL;

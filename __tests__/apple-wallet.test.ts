@@ -67,6 +67,8 @@ describe('Apple Wallet Integration', () => {
       }
     })
     customerId = customer.id
+    // NEW: Use stable Customer.publicToken instead of deprecated Membership.publicToken
+    membershipToken = customer.publicToken
 
     const membership = await prisma.membership.create({
       data: {
@@ -76,7 +78,6 @@ describe('Apple Wallet Integration', () => {
       }
     })
     membershipId = membership.id
-    membershipToken = membership.publicToken
   })
 
   afterAll(async () => {
@@ -251,11 +252,12 @@ describe('Apple Wallet Integration', () => {
 
   describe('Multi-tenant Support', () => {
     it('should generate different passes for different businesses', async () => {
-      // Create second business
+      // Create second business with unique slug
+      const uniqueSlug = `business-2-apple-${Date.now()}`
       const business2 = await prisma.business.create({
         data: {
           name: 'Business 2',
-          slug: 'business-2-apple',
+          slug: uniqueSlug,
           status: BusinessStatus.ACTIVE,
           subscription: {
             create: {
@@ -291,7 +293,8 @@ describe('Apple Wallet Integration', () => {
       })
 
       const pass1 = await generatePassData(membershipToken)
-      const pass2 = await generatePassData(membership2.publicToken)
+      // NEW: Use customer2.publicToken (stable identifier), not membership2.publicToken (nullable)
+      const pass2 = await generatePassData(customer2.publicToken)
 
       expect(pass1.serialNumber).not.toBe(pass2.serialNumber)
       expect(pass1.logoText).not.toBe(pass2.logoText)
@@ -307,13 +310,13 @@ describe('Apple Wallet Integration', () => {
 
   describe('Compatibility', () => {
     it('should not break existing web wallet', async () => {
-      // Web wallet uses membership token directly
-      const membership = await prisma.membership.findUnique({
+      // NEW: Web wallet now uses stable Customer.publicToken
+      const customer = await prisma.customer.findUnique({
         where: { publicToken: membershipToken }
       })
 
-      expect(membership).toBeTruthy()
-      expect(membership!.publicToken).toBe(membershipToken)
+      expect(customer).toBeTruthy()
+      expect(customer!.publicToken).toBe(membershipToken)
     })
 
     it('should not break Google Wallet', async () => {

@@ -215,7 +215,7 @@ model Customer {
   memberships Membership[]
 
   @@unique([businessId, email])
-  @@unique([businessId, phone])
+  // REMOVED: @@unique([businessId, phone]) - Allow family accounts with same phone
   @@index([businessId])
   @@index([email])
   @@index([phone])

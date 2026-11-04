@@ -168,6 +168,7 @@ describe('Single Registration Per Business', () => {
 
     it('creating program with DRAFT status should NOT trigger auto-enrollment', () => {
       const programStatus = 'DRAFT'
+      // @ts-expect-error - Intentionally comparing different literal types to test auto-enrollment logic
       const shouldAutoEnroll = programStatus === 'ACTIVE'
 
       expect(shouldAutoEnroll).toBe(false)
@@ -328,6 +329,7 @@ describe('Single Registration Per Business', () => {
       const adminBusinessId = 'cono-churro'
       const customerBusinessId = 'otra-empresa'
 
+      // @ts-expect-error - Intentionally comparing different literal types to test multi-tenant isolation
       const authorized = adminBusinessId === customerBusinessId
 
       expect(authorized).toBe(false)

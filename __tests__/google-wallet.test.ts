@@ -68,6 +68,8 @@ describe('Google Wallet Integration', () => {
       }
     })
     customerId = customer.id
+    // NEW: Use stable Customer.publicToken instead of deprecated Membership.publicToken
+    membershipToken = customer.publicToken
 
     const membership = await prisma.membership.create({
       data: {
@@ -77,7 +79,6 @@ describe('Google Wallet Integration', () => {
       }
     })
     membershipId = membership.id
-    membershipToken = membership.publicToken
   })
 
   afterAll(async () => {

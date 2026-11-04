@@ -133,18 +133,18 @@ describe('Production Security', () => {
         }
       })
 
-      // Tokens should be CUIDs (not sequential)
-      expect(membership1.publicToken).toBeTruthy()
-      expect(membership2.publicToken).toBeTruthy()
-      expect(membership1.publicToken).not.toBe(membership2.publicToken)
+      // NEW: Tokens should be on Customer (stable identifier), not Membership (deprecated)
+      // Reload customer to get publicToken
+      const customerWithToken = await prisma.customer.findUnique({
+        where: { id: customer.id }
+      })
 
-      // CUIDs are 25 characters
-      expect(membership1.publicToken.length).toBeGreaterThanOrEqual(20)
-      expect(membership2.publicToken.length).toBeGreaterThanOrEqual(20)
+      expect(customerWithToken?.publicToken).toBeTruthy()
+      expect(customerWithToken!.publicToken.length).toBeGreaterThanOrEqual(20)
+      expect(Number.isNaN(parseInt(customerWithToken!.publicToken))).toBe(true)
 
-      // Should not be sequential numbers
-      expect(Number.isNaN(parseInt(membership1.publicToken))).toBe(true)
-      expect(Number.isNaN(parseInt(membership2.publicToken))).toBe(true)
+      // Both memberships share same customer token (stable across programs)
+      expect(membership1.customerId).toBe(membership2.customerId)
 
       // Cleanup
       await prisma.membership.deleteMany({ where: { customerId: customer.id } })

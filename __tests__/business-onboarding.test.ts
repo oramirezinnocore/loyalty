@@ -566,12 +566,14 @@ describe('Business Onboarding', () => {
   describe('Dashboard Integration', () => {
     it('should increment business count after creation', async () => {
       const countBefore = await prisma.business.count()
+      const uniqueSlug = `dashboard-count-test-${Date.now()}`
+      const uniqueEmail = `dashboard-test-${Date.now()}@example.com`
 
       await createBusiness({
         name: 'Dashboard Test',
-        slug: 'dashboard-count-test',
+        slug: uniqueSlug,
         adminName: 'Admin',
-        adminEmail: 'dashboard-test@example.com',
+        adminEmail: uniqueEmail,
         adminPassword: 'DashboardPassword123'
       })
 
@@ -579,8 +581,8 @@ describe('Business Onboarding', () => {
       expect(countAfter).toBe(countBefore + 1)
 
       // Cleanup
-      await prisma.business.deleteMany({ where: { slug: 'dashboard-count-test' } })
-      await prisma.user.deleteMany({ where: { email: 'dashboard-test@example.com' } })
+      await prisma.business.deleteMany({ where: { slug: uniqueSlug } })
+      await prisma.user.deleteMany({ where: { email: uniqueEmail } })
     })
 
     it('should reflect correct subscription status in metrics', async () => {
