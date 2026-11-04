@@ -19,11 +19,29 @@ export default function ScannerPage() {
 
   useEffect(() => {
     // Get business ID from session/context
-    fetch('/api/business').then(res => res.json()).then(data => {
-      if (data.businesses && data.businesses.length > 0) {
-        setBusinessId(data.businesses[0].id)
-      }
-    })
+    fetch('/api/business')
+      .then(async res => {
+        if (res.status === 401) {
+          // Session expired - redirect to login
+          window.location.href = '/auth/signin'
+          return null
+        }
+        if (!res.ok) {
+          throw new Error('Error al cargar información del negocio')
+        }
+        return res.json()
+      })
+      .then(data => {
+        if (data && data.businesses && data.businesses.length > 0) {
+          setBusinessId(data.businesses[0].id)
+        } else if (data && data.businesses && data.businesses.length === 0) {
+          setError('No tienes acceso a ningún negocio. Contacta al administrador.')
+        }
+      })
+      .catch(err => {
+        console.error('Business fetch error:', err)
+        setError('Error al cargar información del negocio. Por favor, recarga la página.')
+      })
   }, [])
 
   // Cleanup camera on unmount or navigation
