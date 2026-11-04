@@ -4,6 +4,7 @@ import { prisma } from '@/lib/prisma'
 import { getSession, getUserBusinesses } from '@/lib/authorization'
 import { revalidatePath } from 'next/cache'
 import { LoyaltyProgramStatus, ProgramType } from '@prisma/client'
+import { autoCreateMembershipsForProgram } from '@/lib/services/customer-lookup'
 
 interface CreateProgramInput {
   name: string
@@ -144,10 +145,21 @@ export async function createLoyaltyProgram(
         }
       })
 
-      return { programId: program.id }
+      return { programId: program.id, status: program.status }
     })
 
-    // 5. Revalidate cache
+    // 5. Auto-create memberships for existing customers if program is ACTIVE
+    if (result.status === LoyaltyProgramStatus.ACTIVE) {
+      try {
+        const membershipResult = await autoCreateMembershipsForProgram(result.programId)
+        console.log(`Auto-created ${membershipResult.membershipsCreated} memberships for new program`)
+      } catch (error) {
+        console.error('Failed to auto-create memberships for new program:', error)
+        // Don't fail program creation if membership creation fails
+      }
+    }
+
+    // 6. Revalidate cache
     revalidatePath('/admin/program')
     revalidatePath('/admin')
 
@@ -271,7 +283,19 @@ export async function updateProgramStatus(
       data: { status: newStatus }
     })
 
-    // 8. Revalidate cache
+    // 8. Auto-create memberships for existing customers when activating program
+    if (newStatus === LoyaltyProgramStatus.ACTIVE) {
+      try {
+        const result = await autoCreateMembershipsForProgram(programId)
+        console.log(`Auto-created ${result.membershipsCreated} memberships for program ${programId}`)
+      } catch (error) {
+        console.error('Failed to auto-create memberships:', error)
+        // Don't fail the status update if membership creation fails
+        // Memberships can be created on-demand when customers scan QR
+      }
+    }
+
+    // 9. Revalidate cache
     revalidatePath('/admin/program')
     revalidatePath('/admin')
     revalidatePath(`/join/${businesses[0].slug}`)

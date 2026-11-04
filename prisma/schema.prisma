@@ -54,13 +54,13 @@ enum EarnedRewardStatus {
 }
 
 model User {
-  id            String         @id @default(cuid())
-  email         String         @unique
-  name          String?
-  passwordHash  String
-  role          UserRole       @default(BUSINESS_ADMIN)
-  createdAt     DateTime       @default(now())
-  updatedAt     DateTime       @updatedAt
+  id           String   @id @default(cuid())
+  email        String   @unique
+  name         String?
+  passwordHash String
+  role         UserRole @default(BUSINESS_ADMIN)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
 
   businessUsers BusinessUser[]
 
@@ -68,18 +68,18 @@ model User {
 }
 
 model Business {
-  id              String          @id @default(cuid())
-  name            String
-  slug            String          @unique
-  status          BusinessStatus  @default(ACTIVE)
+  id     String         @id @default(cuid())
+  name   String
+  slug   String         @unique
+  status BusinessStatus @default(ACTIVE)
 
   // Branding
-  brandColor      String?
-  logoUrl         String?
-  description     String?
+  brandColor  String?
+  logoUrl     String?
+  description String?
 
-  createdAt       DateTime        @default(now())
-  updatedAt       DateTime        @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   businessUsers   BusinessUser[]
   locations       Location[]
@@ -97,8 +97,8 @@ model BusinessUser {
   userId     String
   createdAt  DateTime @default(now())
 
-  business   Business @relation(fields: [businessId], references: [id], onDelete: Cascade)
-  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  business Business @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  user     User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([businessId, userId])
   @@index([userId])
@@ -118,33 +118,33 @@ model Location {
   createdAt  DateTime @default(now())
   updatedAt  DateTime @updatedAt
 
-  business   Business @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  business Business @relation(fields: [businessId], references: [id], onDelete: Cascade)
 
   @@index([businessId])
 }
 
 model Subscription {
-  id              String             @id @default(cuid())
-  businessId      String             @unique
-  status          SubscriptionStatus @default(TRIAL)
-  priceMonthlyMXN Int                @default(299)
+  id                 String             @id @default(cuid())
+  businessId         String             @unique
+  status             SubscriptionStatus @default(TRIAL)
+  priceMonthlyMXN    Int                @default(299)
   currentPeriodStart DateTime?
   currentPeriodEnd   DateTime?
-  trialEndsAt     DateTime?
-  canceledAt      DateTime?
+  trialEndsAt        DateTime?
+  canceledAt         DateTime?
 
   // Mercado Pago integration
-  mpPreapprovalId String?            @unique
-  mpPayerEmail    String?
-  mpStatus        String?
-  lastPaymentDate DateTime?
-  nextBillingDate DateTime?
+  mpPreapprovalId   String?   @unique
+  mpPayerEmail      String?
+  mpStatus          String?
+  lastPaymentDate   DateTime?
+  nextBillingDate   DateTime?
   gracePeriodEndsAt DateTime?
 
-  createdAt       DateTime           @default(now())
-  updatedAt       DateTime           @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
-  business        Business           @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  business Business @relation(fields: [businessId], references: [id], onDelete: Cascade)
 
   @@index([businessId])
   @@index([status])
@@ -152,27 +152,27 @@ model Subscription {
 }
 
 model LoyaltyProgram {
-  id              String               @id @default(cuid())
-  businessId      String
-  name            String
-  description     String?
+  id                String               @id @default(cuid())
+  businessId        String
+  name              String
+  description       String?
   publicDescription String?
-  status          LoyaltyProgramStatus @default(DRAFT)
+  status            LoyaltyProgramStatus @default(DRAFT)
 
   // Program type (semantic/UI field)
-  programType     ProgramType          @default(VISITS)
-  pointsRequired  Int                  @default(0) // Goal for completion
+  programType    ProgramType @default(VISITS)
+  pointsRequired Int         @default(0) // Goal for completion
 
   // Additional program-level rules
   termsAndConditions String?
-  expirationDays  Int?                 // Days until membership expires
+  expirationDays     Int? // Days until membership expires
 
-  createdAt       DateTime             @default(now())
-  updatedAt       DateTime             @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
-  business        Business             @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  business          Business           @relation(fields: [businessId], references: [id], onDelete: Cascade)
   rewardDefinitions RewardDefinition[] // Single source of truth for rewards
-  memberships     Membership[]
+  memberships       Membership[]
 
   @@index([businessId])
   @@index([status])
@@ -180,60 +180,72 @@ model LoyaltyProgram {
 }
 
 model RewardDefinition {
-  id               String         @id @default(cuid())
+  id               String   @id @default(cuid())
   loyaltyProgramId String
   name             String
   description      String?
-  pointsRequired   Int            @default(0)
-  isActive         Boolean        @default(true)
-  createdAt        DateTime       @default(now())
-  updatedAt        DateTime       @updatedAt
+  pointsRequired   Int      @default(0)
+  isActive         Boolean  @default(true)
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
 
-  loyaltyProgram   LoyaltyProgram @relation(fields: [loyaltyProgramId], references: [id], onDelete: Cascade)
-  earnedRewards    EarnedReward[]
+  loyaltyProgram LoyaltyProgram @relation(fields: [loyaltyProgramId], references: [id], onDelete: Cascade)
+  earnedRewards  EarnedReward[]
 
   @@index([loyaltyProgramId])
   @@index([isActive])
 }
 
 model Customer {
-  id          String       @id @default(cuid())
-  businessId  String
-  email       String?
-  phone       String?
-  firstName   String
-  lastName    String?
-  createdAt   DateTime     @default(now())
-  updatedAt   DateTime     @updatedAt
+  id         String  @id @default(cuid())
+  businessId String
+  email      String?
+  phone      String?
+  firstName  String
+  lastName   String?
+
+  // STABLE QR TOKEN - Identifies customer within business (not program-specific)
+  // This token persists across multiple loyalty programs
+  publicToken String @unique @default(cuid())
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   business    Business     @relation(fields: [businessId], references: [id], onDelete: Cascade)
   memberships Membership[]
 
   @@unique([businessId, email])
+  @@unique([businessId, phone])
   @@index([businessId])
   @@index([email])
   @@index([phone])
+  @@index([publicToken])
 }
 
 model Membership {
-  id               String         @id @default(cuid())
+  id               String @id @default(cuid())
   customerId       String
   loyaltyProgramId String
-  publicToken      String         @unique @default(cuid())
-  currentPoints    Int            @default(0)
-  lifetimePoints   Int            @default(0)
-  isActive         Boolean        @default(true)
-  joinedAt         DateTime       @default(now())
-  lastActivityAt   DateTime?
-  createdAt        DateTime       @default(now())
-  updatedAt        DateTime       @updatedAt
 
-  customer         Customer       @relation(fields: [customerId], references: [id], onDelete: Cascade)
-  loyaltyProgram   LoyaltyProgram @relation(fields: [loyaltyProgramId], references: [id], onDelete: Cascade)
+  // DEPRECATED: Legacy field maintained for backwards compatibility with existing QR codes
+  // New registrations use Customer.publicToken instead
+  // Scanner checks Customer.publicToken first, then falls back to this
+  publicToken String? @unique
 
-  transactions     Transaction[]
-  earnedRewards    EarnedReward[]
-  walletPass       WalletPass?
+  currentPoints  Int       @default(0)
+  lifetimePoints Int       @default(0)
+  isActive       Boolean   @default(true)
+  joinedAt       DateTime  @default(now())
+  lastActivityAt DateTime?
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  customer       Customer       @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  loyaltyProgram LoyaltyProgram @relation(fields: [loyaltyProgramId], references: [id], onDelete: Cascade)
+
+  transactions  Transaction[]
+  earnedRewards EarnedReward[]
+  walletPass    WalletPass?
 
   @@unique([customerId, loyaltyProgramId])
   @@index([publicToken])
@@ -242,15 +254,15 @@ model Membership {
 }
 
 model WalletPass {
-  id           String     @id @default(cuid())
-  membershipId String     @unique
+  id           String    @id @default(cuid())
+  membershipId String    @unique
   applePassId  String?
   googlePassId String?
   lastSyncedAt DateTime?
-  createdAt    DateTime   @default(now())
-  updatedAt    DateTime   @updatedAt
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
 
-  membership   Membership @relation(fields: [membershipId], references: [id], onDelete: Cascade)
+  membership Membership @relation(fields: [membershipId], references: [id], onDelete: Cascade)
 
   @@index([membershipId])
 }
@@ -266,7 +278,7 @@ model Transaction {
   createdById  String?
   createdAt    DateTime        @default(now())
 
-  membership   Membership      @relation(fields: [membershipId], references: [id], onDelete: Cascade)
+  membership Membership @relation(fields: [membershipId], references: [id], onDelete: Cascade)
 
   @@index([membershipId])
   @@index([type])
@@ -282,10 +294,10 @@ model EarnedReward {
   expiresAt          DateTime?
   redeemedAt         DateTime?
 
-  membership         Membership         @relation(fields: [membershipId], references: [id], onDelete: Cascade)
-  rewardDefinition   RewardDefinition   @relation(fields: [rewardDefinitionId], references: [id], onDelete: Cascade)
+  membership       Membership       @relation(fields: [membershipId], references: [id], onDelete: Cascade)
+  rewardDefinition RewardDefinition @relation(fields: [rewardDefinitionId], references: [id], onDelete: Cascade)
 
-  redemption         Redemption?
+  redemption Redemption?
 
   @@index([membershipId])
   @@index([rewardDefinitionId])
@@ -294,27 +306,27 @@ model EarnedReward {
 }
 
 model Redemption {
-  id             String       @id @default(cuid())
-  earnedRewardId String       @unique
+  id             String   @id @default(cuid())
+  earnedRewardId String   @unique
   redeemedById   String?
   notes          String?
-  redeemedAt     DateTime     @default(now())
+  redeemedAt     DateTime @default(now())
 
-  earnedReward   EarnedReward @relation(fields: [earnedRewardId], references: [id], onDelete: Cascade)
+  earnedReward EarnedReward @relation(fields: [earnedRewardId], references: [id], onDelete: Cascade)
 
   @@index([earnedRewardId])
   @@index([redeemedAt])
 }
 
 model WebhookEvent {
-  id              String   @id @default(cuid())
-  provider        String
-  eventId         String   @unique
-  eventType       String
-  processed       Boolean  @default(false)
-  payload         Json
-  createdAt       DateTime @default(now())
-  processedAt     DateTime?
+  id          String    @id @default(cuid())
+  provider    String
+  eventId     String    @unique
+  eventType   String
+  processed   Boolean   @default(false)
+  payload     Json
+  createdAt   DateTime  @default(now())
+  processedAt DateTime?
 
   @@index([provider, eventId])
   @@index([processed])

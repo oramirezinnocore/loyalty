@@ -181,12 +181,14 @@ export async function registerPurchase(membershipId: string, businessId: string,
       transaction,
       membership: updatedMembership,
       earnedReward,
-      reachedGoal
+      reachedGoal,
+      customer: membership.customer // Pass customer for wallet sync
     }
   })
 
-  // Sync to wallets (best effort, don't fail transaction)
-  const token = result.membership.publicToken
+  // Sync to wallets using Customer.publicToken (stable identifier)
+  // Legacy: membership.publicToken may be null for new memberships
+  const token = result.customer.publicToken
   syncMembershipToWallet(token).catch(err =>
     console.error('Google Wallet sync failed:', err)
   )
@@ -267,15 +269,15 @@ export async function redeemReward(earnedRewardId: string, businessId: string, r
     return { earnedReward: updated, redemption }
   })
 
-  // Get membership token for sync
-  const membershipForSync = await prisma.membership.findUnique({
-    where: { id: earnedReward.membershipId },
+  // Get customer token for sync (stable identifier)
+  const customerForSync = await prisma.customer.findUnique({
+    where: { id: earnedReward.membership.customerId },
     select: { publicToken: true }
   })
 
-  if (membershipForSync) {
-    // Sync to wallets (best effort)
-    const token = membershipForSync.publicToken
+  if (customerForSync) {
+    // Sync to wallets (best effort) using Customer.publicToken
+    const token = customerForSync.publicToken
     syncMembershipToWallet(token).catch(err =>
       console.error('Google Wallet sync failed:', err)
     )
